@@ -2,11 +2,18 @@ cmake_minimum_required(VERSION 3.25)
 
 project("waymo" LANGUAGES C)
 
+if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+    message(FATAL_ERROR "Building on Windows is not supported.")
+endif()
+
 option(USE_CCACHE "Try to use ccache for faster builds" ON)
 option(USE_LTO "Use linktime optimizations if available" ON)
 option(BUILD_SHARED "Build a shared library for the system" ON)
 option(BUILD_STATIC "Build a static library for the system" ON)
 option(GENERATE_PROTOCOLS "Generate Wayland protocol files if needed" ON)
+
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD_REQUIRED ON)
 
 find_program(CCACHE_PROGRAM ccache)
 if(USE_CCACHE AND CCACHE_PROGRAM)
@@ -23,19 +30,17 @@ endif()
 
 add_library(waymo_settings INTERFACE)
 
-if(NOT MSVC)
-  target_compile_options(waymo_settings INTERFACE -Wall -Wpedantic -Wno-strict-prototypes)
+target_compile_options(waymo_settings INTERFACE -Wall -Wpedantic -Wno-strict-prototypes)
 
-  include(CheckCCompilerFlag)
-  check_c_compiler_flag("-O3" HAS_O3)
-  check_c_compiler_flag("-march=native" HAS_MARCH_NATIVE)
-  if(HAS_O3)
-    target_compile_options(waymo_settings INTERFACE -O3)
-  endif()
-  
-  if (HAS_MARCH_NATIVE)
-    target_compile_options(waymo_settings INTERFACE -march=native)
-  endif()
+include(CheckCCompilerFlag)
+check_c_compiler_flag("-O3" HAS_O3)
+check_c_compiler_flag("-march=native" HAS_MARCH_NATIVE)
+if(HAS_O3)
+  target_compile_options(waymo_settings INTERFACE -O3)
+endif()
+
+if (HAS_MARCH_NATIVE)
+  target_compile_options(waymo_settings INTERFACE -march=native)
 endif()
 
 if(USE_LTO)
