@@ -1,0 +1,152 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+SRC_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BUILD_DIR="${BUILD_DIR:-"$SRC_DIR/build"}"
+GEN=""
+CLEAN=false
+CMAKE_EXTRA_ARGS=()
+
+show_help() {
+	cat <<EOF
+Configure script for waymo project
+
+Usage: $0 [OPTIONS] -- [CMAKE_OPTIONS]
+
+Options:
+  -h, --help            Show this help message
+  -b, --build-dir DIR   Set build directory (default: ./build)
+  -c, --clean           Clean the build dir if it already exists
+  -g, --generator GEN   Specify CMake generator (e.g., Ninja, Unix Makefiles)
+  --no-ninja            Don't use Ninja even if available
+
+CMAKE_OPTIONS:
+  Any additional arguments after -- will be passed directly to CMake
+  Examples: -DUSE_CCACHE=OFF -DCMAKE_BUILD_TYPE=Debug
+
+CMake Options from CMakeLists.txt:
+  -DUSE_CCACHE=[ON|OFF]    Use ccache for faster builds (default: ON)
+  -DUSE_LTO=[ON|OFF]       Use linktime optimizations (default: ON)
+  -DBUILD_SHARED=[ON|OFF]  Build shared library (default: ON)
+  -DBUILD_STATIC=[ON|OFF]  Build static library (default: ON)
+
+Examples:
+  $0                          # Default configuration
+  $0 -b build-debug          # Build in build-debug directory
+  $0 -c                      # Clean build directory before configuring
+  $0 --generator "Unix Makefiles" # Use Unix Makefiles
+  $0 -- -DUSE_CCACHE=OFF -DCMAKE_BUILD_TYPE=Debug # Pass options to CMake
+EOF
+}
+
+if ! command -v cmake &>/dev/null; then
+	echo "cmake is not installed. It must be installed to use this"
+	exit 1
+fi
+
+while [[ $# -gt 0 ]]; do
+	case $1 in
+	-h | --help)
+		show_help
+		exit 0
+		;;
+	-b | --build-dir)
+		BUILD_DIR="$2"
+		shift 2
+		;;
+	--build-dir=*)
+		BUILD_DIR="${1#*=}"
+		shift
+		;;
+	-c | --clean)
+		CLEAN=true
+		shift
+		;;
+	-g | --generator)
+		GEN="$2"
+		shift 2
+		;;
+	--generator=*)
+		GEN="${1#*=}"
+		shift
+		;;
+	--no-ninja)
+		GEN="Unix Makefiles"
+		shift
+		;;
+	--)
+		shift
+		CMAKE_EXTRA_ARGS=("$@")
+		break
+		;;
+	-*)
+		# Check if it's a CMake -D option
+		if [[ "$1" == -D* ]]; then
+			CMAKE_EXTRA_ARGS+=("$1")
+			shift
+		else
+			echo "Error: Unknown option: $1"
+			show_help
+			exit 1
+		fi
+		;;
+	*)
+		# Treat non-option arguments as CMake options if they start with -D
+		if [[ "$1" == -D* ]]; then
+			CMAKE_EXTRA_ARGS+=("$1")
+		else
+			echo "Error: Unexpected argument: $1"
+			show_help
+			exit 1
+		fi
+		shift
+		;;
+	esac
+done
+
+if [[ "$CLEAN" == true ]]; then
+	if [[ -d "$BUILD_DIR" ]]; then
+		echo "Cleaning build directory: $BUILD_DIR"
+		rm -rf "$BUILD_DIR"
+	else
+		echo "Build directory does not exist, nothing to clean: $BUILD_DIR"
+	fi
+fi
+
+if [[ -z "$GEN" ]] && command -v ninja &>/dev/null; then
+	echo "Using Ninja as generator"
+	GEN="Ninja"
+else
+	echo "Using default generator"
+fi
+
+CMAKE_CMD=("cmake")
+if [[ -n "$GEN" ]]; then
+	CMAKE_CMD+=("-G" "$GEN")
+fi
+
+CMAKE_CMD+=("-S" "$SRC_DIR" "-B" "$BUILD_DIR")
+
+# Add any extra arguments
+if [[ ${#CMAKE_EXTRA_ARGS[@]} -gt 0 ]]; then
+	echo "Additional CMake options: ${CMAKE_EXTRA_ARGS[*]}"
+	CMAKE_CMD+=("${CMAKE_EXTRA_ARGS[@]}")
+fi
+
+echo "=== Configuration ==="
+echo "Source directory: $SRC_DIR"
+echo "Build directory:  $BUILD_DIR"
+echo "Generator:        ${GEN:-Default}"
+echo "Clean:            $CLEAN"
+echo "CMake command:    ${CMAKE_CMD[*]}"
+echo "===================="
+echo ""
+
+if "${CMAKE_CMD[@]}"; then
+	echo "CMake configured successfully"
+	echo "To build this run cmake --build build (or the specified build dir)"
+else
+	echo "Configuration failed!"
+	exit 1
+fi
