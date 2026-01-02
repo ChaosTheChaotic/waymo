@@ -12,8 +12,7 @@ option(BUILD_SHARED "Build a shared library for the system" ON)
 option(BUILD_STATIC "Build a static library for the system" ON)
 option(GENERATE_PROTOCOLS "Generate Wayland protocol files if needed" ON)
 
-set(CMAKE_C_STANDARD 11)
-set(CMAKE_C_STANDARD_REQUIRED ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 find_program(CCACHE_PROGRAM ccache)
 if(USE_CCACHE AND CCACHE_PROGRAM)
