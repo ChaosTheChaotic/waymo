@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include <pthread.h>
+#include "waycon.h"
 
 typedef enum {
   CMD_MOUSE_MOVE, // Takes x, y
@@ -33,6 +34,7 @@ typedef struct {
 typedef struct {
   pthread_t thread;
   command_queue *queue;
+  waymoctx *wayctx;
 } waymo_event_loop;
 
 waymo_event_loop* create_event_loop(unsigned int max_commands);

@@ -112,7 +112,7 @@ endif()
 
 add_library(waymo_obj OBJECT ${SOURCE_FILES} "${PROTO_K_C}" "${PROTO_P_C}")
 set_property(TARGET waymo_obj PROPERTY POSITION_INDEPENDENT_CODE ON)
-target_include_directories(waymo_obj PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include" "${GEN_PROTO_DIR_H}")
+target_include_directories(waymo_obj PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include" "${GEN_PROTO_DIR_H}" "${CMAKE_CURRENT_SOURCE_DIR}/src/include")
 target_link_libraries(waymo_obj PUBLIC waymo_settings)
 
 if(BUILD_SHARED)

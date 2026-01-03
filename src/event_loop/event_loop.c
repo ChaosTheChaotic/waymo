@@ -1,4 +1,5 @@
 #include "event_loop.h"
+#include "waycon.h"
 #include <pthread.h>
 #include <stdlib.h>
 
@@ -94,8 +95,11 @@ waymo_event_loop* create_event_loop(unsigned int max_commands) {
     return NULL;
   }
 
+  loop->wayctx = init_waymoctx();
+
   if (pthread_create(&loop->thread, NULL, event_loop, loop) != 0) {
     destroy_queue(loop->queue);
+    destroy_waymoctx(loop->wayctx);
     free(loop);
     return NULL;
   }
