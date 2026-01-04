@@ -2,7 +2,8 @@
 #include "wvp.h"
 
 bool waymoctx_pointer(waymoctx *ctx) {
-  ctx->ptr = zwlr_virtual_pointer_manager_v1_create_virtual_pointer(ctx->pman, ctx->seat);
+  ctx->ptr = zwlr_virtual_pointer_manager_v1_create_virtual_pointer(ctx->pman,
+                                                                    ctx->seat);
   return true;
 }
 

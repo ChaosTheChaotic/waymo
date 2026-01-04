@@ -6,6 +6,10 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
     message(FATAL_ERROR "Building on Windows is not supported.")
 endif()
 
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(WAYLAND_CLIENT REQUIRED wayland-client)
+pkg_check_modules(XKBCOMMON REQUIRED xkbcommon)
+
 option(USE_CCACHE "Try to use ccache for faster builds" ON)
 option(USE_LTO "Use linktime optimizations if available" ON)
 option(BUILD_SHARED "Build a shared library for the system" ON)
@@ -110,15 +114,32 @@ else()
     message(STATUS "Protocol generation disabled. Using existing files")
 endif()
 
+add_library(waymo_deps INTERFACE)
+target_link_libraries(waymo_deps INTERFACE "${WAYLAND_CLIENT_LIBRARIES}" "${XKBCOMMON_LIBRARIES}")
+target_include_directories(waymo_deps INTERFACE
+  "${WAYLAND_CLIENT_INCLUDE_DIRS}"
+  "${XKBCOMMON_INCLUDE_DIRS}"
+)
+
 add_library(waymo_obj OBJECT ${SOURCE_FILES} "${PROTO_K_C}" "${PROTO_P_C}")
+target_compile_options(waymo_obj PUBLIC "${WAYLAND_CLIENT_CFLAGS_OTHER}" "${XKBCOMMON_CFLAGS_OTHER}")
 set_property(TARGET waymo_obj PROPERTY POSITION_INDEPENDENT_CODE ON)
-target_include_directories(waymo_obj PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include" "${GEN_PROTO_DIR_H}" "${CMAKE_CURRENT_SOURCE_DIR}/src/include")
-target_link_libraries(waymo_obj PUBLIC waymo_settings)
+target_include_directories(
+  waymo_obj
+  PUBLIC
+  "${CMAKE_CURRENT_SOURCE_DIR}/include"
+  "${GEN_PROTO_DIR_H}"
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/include"
+  PRIVATE
+  "${WAYLAND_CLIENT_INCLUDE_DIRS}"
+  "${XKBCOMMON_INCLUDE_DIRS}"
+)
+target_link_libraries(waymo_obj PRIVATE waymo_settings PUBLIC waymo_deps)
 
 if(BUILD_SHARED)
   message(STATUS "Build shared enabled, building the shared library")
   add_library(waymo_shared SHARED)
-  target_link_libraries(waymo_shared PUBLIC waymo_obj)
+  target_link_libraries(waymo_shared PUBLIC waymo_obj waymo_deps PRIVATE waymo_settings)
   set_target_properties(waymo_shared PROPERTIES OUTPUT_NAME "waymo" LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/lib/shared" RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/lib/shared")
 else()
   message(STATUS "Build shared disabled, skipping the shared library build")
@@ -127,7 +148,7 @@ endif()
 if(BUILD_STATIC)
   message(STATUS "Build static enabled, building the static library")
   add_library(waymo_static STATIC)
-  target_link_libraries(waymo_static PUBLIC waymo_obj)
+  target_link_libraries(waymo_static PUBLIC waymo_obj waymo_deps PRIVATE waymo_settings)
   set_target_properties(waymo_static PROPERTIES OUTPUT_NAME "waymo" ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/lib/static")
 else()
   message(STATUS "Build static disabled, skipping the static library build")

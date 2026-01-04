@@ -3,8 +3,8 @@
 
 #include "wvk.h"
 #include "wvp.h"
-#include <wayland-client-core.h>
 #include <stdbool.h>
+#include <wayland-client-core.h>
 
 typedef struct {
   struct wl_display *display;
@@ -16,7 +16,7 @@ typedef struct {
   struct zwlr_virtual_pointer_v1 *ptr;
 } waymoctx;
 
-waymoctx* init_waymoctx();
+waymoctx *init_waymoctx(char *layout);
 void destroy_waymoctx(waymoctx *ctx);
 
 bool waymoctx_connect(waymoctx *ctx);
