@@ -47,6 +47,12 @@ bool waymoctx_connect(waymoctx *ctx) {
     waymoctx_destroy_connect(ctx);
     return false;
   }
+  if (ctx->pman == NULL) {
+    fprintf(stderr,
+            "Compositor does not support the virtual pointer protocol\n");
+    waymoctx_destroy_connect(ctx);
+    return false;
+  }
   if (ctx->seat == NULL) {
     fprintf(stderr, "No seat found\n");
     waymoctx_destroy_connect(ctx);
@@ -56,7 +62,8 @@ bool waymoctx_connect(waymoctx *ctx) {
 }
 
 void waymoctx_destroy_connect(waymoctx *ctx) {
-  if (ctx->seat) wl_seat_destroy(ctx->seat);
+  if (ctx->seat)
+    wl_seat_destroy(ctx->seat);
   wl_registry_destroy(ctx->registry);
   wl_display_disconnect(ctx->display);
 }

@@ -1,7 +1,10 @@
 #include "event_loop.h"
 #include "waycon.h"
+#include <errno.h>
 #include <pthread.h>
 #include <stdlib.h>
+#include <string.h>
+#include <sys/epoll.h>
 #include <sys/eventfd.h>
 #include <unistd.h>
 #include <wayland-client-core.h>
@@ -39,26 +42,15 @@ command_queue *create_queue(unsigned int max_commands) {
   if (!q)
     return NULL;
 
-  q->commands = malloc(sizeof(command *) * max_commands);
-  if (!q->commands) {
-    free(q);
-    q = NULL;
-    return NULL;
-  }
+  q->commands = calloc(max_commands, sizeof(command *));
+  q->fd = eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
 
-  for (unsigned int i = 0; i < max_commands; i++) {
-    q->commands[i] = NULL;
-  }
-
+  pthread_mutex_init(&q->mutex, NULL);
   q->num_commands = 0;
   q->max_capacity = max_commands;
   q->front = 0;
   q->back = 0;
   q->shutdown = false;
-
-  pthread_mutex_init(&q->mutex, NULL);
-  pthread_cond_init(&q->cond, NULL);
-
   return q;
 }
 
@@ -68,7 +60,6 @@ void destroy_queue(command_queue *q) {
 
   pthread_mutex_lock(&q->mutex);
   q->shutdown = true;
-  pthread_cond_broadcast(&q->cond);
 
   while (q->num_commands > 0) {
     command *cmd = q->commands[q->front];
@@ -81,8 +72,10 @@ void destroy_queue(command_queue *q) {
 
   pthread_mutex_unlock(&q->mutex);
 
+  if (q->fd >= 0)
+    close(q->fd);
+
   pthread_mutex_destroy(&q->mutex);
-  pthread_cond_destroy(&q->cond);
 
   free(q->commands);
   q->commands = NULL;
@@ -91,56 +84,34 @@ void destroy_queue(command_queue *q) {
 }
 
 bool add_queue(command_queue *q, command *cmd) {
-  if (!q || !cmd)
-    return false;
-
   pthread_mutex_lock(&q->mutex);
-
-  while (q->num_commands >= q->max_capacity && !q->shutdown) {
-    pthread_cond_wait(&q->cond, &q->mutex);
-  }
-
-  if (q->shutdown) {
+  if (q->num_commands >= q->max_capacity || q->shutdown) {
     pthread_mutex_unlock(&q->mutex);
-    free_command(cmd);
     return false;
   }
-
-  // Store the command pointer
   q->commands[q->back] = cmd;
   q->back = (q->back + 1) % q->max_capacity;
   q->num_commands++;
 
-  pthread_cond_signal(&q->cond);
-  pthread_mutex_unlock(&q->mutex);
+  // Signal the epoll loop that a command is ready
+  uint64_t u = 1;
+  write(q->fd, &u, sizeof(uint64_t));
 
+  pthread_mutex_unlock(&q->mutex);
   return true;
 }
 
 command *remove_queue(command_queue *q) {
-  if (!q)
-    return NULL;
-
   pthread_mutex_lock(&q->mutex);
-
-  while (q->num_commands == 0 && !q->shutdown) {
-    pthread_cond_wait(&q->cond, &q->mutex);
-  }
-
-  if (q->shutdown && q->num_commands == 0) {
+  if (q->num_commands == 0) {
     pthread_mutex_unlock(&q->mutex);
     return NULL;
   }
-
-  // Get the command pointer
   command *cmd = q->commands[q->front];
-  q->commands[q->front] = NULL; // Clear the slot
+  q->commands[q->front] = NULL;
   q->front = (q->front + 1) % q->max_capacity;
   q->num_commands--;
-
-  pthread_cond_signal(&q->cond);
   pthread_mutex_unlock(&q->mutex);
-
   return cmd;
 }
 
@@ -166,35 +137,71 @@ void execute_command(waymoctx *ctx, command *cmd) {
   wl_display_flush(ctx->display);
 }
 
-struct eloop_tuple {
-  waymo_event_loop *loop;
-  struct eloop_params *params;
-};
-
-void* event_loop(void *arg) {
+void *event_loop(void *arg) {
   waymo_event_loop *loop = (waymo_event_loop *)arg;
-  
-  if (!loop || !loop->wayctx) {
+
+  waymoctx *ctx = init_waymoctx(loop->layout);
+  if (!ctx)
     return NULL;
-  }
+
+  int epoll_fd = epoll_create1(EPOLL_CLOEXEC);
+  int wayland_fd = wl_display_get_fd(ctx->display);
+
+  struct epoll_event ev_wayland = {.events = EPOLLIN, .data.fd = wayland_fd};
+  struct epoll_event ev_cmd = {.events = EPOLLIN, .data.fd = loop->queue->fd};
+
+  epoll_ctl(epoll_fd, EPOLL_CTL_ADD, wayland_fd, &ev_wayland);
+  epoll_ctl(epoll_fd, EPOLL_CTL_ADD, loop->queue->fd, &ev_cmd);
+
+  struct epoll_event events[2];
 
   while (true) {
-    command *cmd = remove_queue(loop->queue);
-    if (!cmd)
+    // Dispatch any internal Wayland events before sleeping
+    while (wl_display_prepare_read(ctx->display) != 0) {
+      wl_display_dispatch_pending(ctx->display);
+    }
+    wl_display_flush(ctx->display);
+
+    int nfds = epoll_wait(epoll_fd, events, 2, -1); // Block until event
+    if (nfds < 0 && errno != EINTR)
       break;
 
-    if (cmd->type == CMD_QUIT) {
-      free_command(cmd);
-      break;
+    bool wayland_ready = false;
+    for (int i = 0; i < nfds; i++) {
+      if (events[i].data.fd == wayland_fd) {
+        if (events[i].events & (EPOLLERR | EPOLLHUP)) {
+          // Handle compositor disconnect
+          goto loop_exit;
+        }
+        wayland_ready = true;
+      } else if (events[i].data.fd == loop->queue->fd) {
+        // Clear eventfd signal
+        uint64_t u;
+        read(loop->queue->fd, &u, sizeof(uint64_t));
+
+        command *cmd;
+        while ((cmd = remove_queue(loop->queue))) {
+          if (cmd->type == CMD_QUIT) {
+            free_command(cmd);
+            goto loop_exit;
+          }
+          execute_command(ctx, cmd);
+          free_command(cmd);
+        }
+      }
     }
 
-    execute_command(loop->wayctx, cmd);
-    free_command(cmd);
-
-    wl_display_prepare_read(loop->wayctx->display);
-    wl_display_read_events(loop->wayctx->display);
-    wl_display_dispatch_pending(loop->wayctx->display);
+    if (wayland_ready) {
+      wl_display_read_events(ctx->display);
+    } else {
+      wl_display_cancel_read(ctx->display);
+    }
+    wl_display_dispatch_pending(ctx->display);
   }
+
+loop_exit:
+  close(epoll_fd);
+  destroy_waymoctx(ctx);
   return NULL;
 }
 
@@ -203,23 +210,17 @@ waymo_event_loop *create_event_loop(struct eloop_params *params) {
   if (!loop)
     return NULL;
 
+  loop->layout = params->layout ? strdup(params->layout) : strdup("us");
   loop->queue = create_queue(params->max_commands);
-  if (!loop->queue) {
-    free(loop);
-    return NULL;
-  }
-
-  // Initialize the context in the main thread to handle errors safely
-  loop->wayctx = init_waymoctx(params->layout);
-  if (!loop->wayctx) {
-    destroy_queue(loop->queue);
+  if (!loop->queue || !loop->layout) {
+    free(loop->layout);
     free(loop);
     return NULL;
   }
 
   if (pthread_create(&loop->thread, NULL, event_loop, loop) != 0) {
-    destroy_waymoctx(loop->wayctx);
     destroy_queue(loop->queue);
+    free(loop->layout);
     free(loop);
     return NULL;
   }
@@ -230,24 +231,18 @@ void destroy_event_loop(waymo_event_loop *loop) {
   if (!loop)
     return;
 
-  // Signal shutdown to the background thread 
-  if (loop->queue != NULL) {
-    pthread_mutex_lock(&loop->queue->mutex);
-    loop->queue->shutdown = true;
-    pthread_cond_broadcast(&loop->queue->cond);
-    pthread_mutex_unlock(&loop->queue->mutex);
-  }
-
-  // Wait for the thread to finish processing
-  pthread_join(loop->thread, NULL);
-
-  if (loop->wayctx != NULL) {
-    destroy_waymoctx(loop->wayctx);
+  // Signal shutdown to the background thread
+  command *qcmd = create_quit_cmd();
+  if (qcmd) {
+    add_queue(loop->queue, qcmd);
+    // Wait for the thread to finish processing
+    pthread_join(loop->thread, NULL);
   }
 
   if (loop->queue != NULL) {
     destroy_queue(loop->queue);
   }
 
+  free(loop->layout);
   free(loop);
 }

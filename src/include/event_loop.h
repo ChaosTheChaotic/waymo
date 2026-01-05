@@ -1,16 +1,15 @@
 #ifndef ELT_H
 #define ELT_H
 
-#include "waycon.h"
 #include <pthread.h>
 #include <stdbool.h>
 
 typedef enum {
   CMD_MOUSE_MOVE,    // Takes x, y and if movement should be relative
   CMD_MOUSE_CLICK,   // Takes the button and num clicks
-  CMD_MOUSE_BTN, // Takes button and if down
+  CMD_MOUSE_BTN,     // Takes button and if down
   CMD_KEYBOARD_TYPE, // Takes key and num clicks
-  CMD_KEYBOARD_KEY, // Takes key and if down
+  CMD_KEYBOARD_KEY,  // Takes key and if down
   CMD_QUIT,
 } command_type;
 
@@ -49,7 +48,7 @@ typedef struct {
   unsigned int back;
   unsigned int max_capacity;
   pthread_mutex_t mutex;
-  pthread_cond_t cond;
+  int fd;
   bool shutdown;
 } command_queue;
 
@@ -61,7 +60,7 @@ struct eloop_params {
 typedef struct {
   pthread_t thread;
   command_queue *queue;
-  waymoctx *wayctx;
+  char *layout;
 } waymo_event_loop;
 
 waymo_event_loop *create_event_loop(struct eloop_params *params);

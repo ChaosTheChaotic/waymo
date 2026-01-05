@@ -24,8 +24,10 @@ void destroy_waymoctx(waymoctx *ctx) {
   if (!ctx)
     return;
 
-  if (ctx->ptr) waymoctx_destroy_pointer(ctx);
-  if (ctx->kbd) waymoctx_destroy_kbd(ctx);
+  if (ctx->ptr)
+    waymoctx_destroy_pointer(ctx);
+  if (ctx->kbd)
+    waymoctx_destroy_kbd(ctx);
   waymoctx_destroy_connect(ctx);
   free(ctx);
   ctx = NULL;

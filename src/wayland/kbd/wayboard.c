@@ -17,8 +17,11 @@ char *get_keymap_string(char *layout) {
   struct xkb_rule_names names = {.layout = layout};
   struct xkb_keymap *keymap =
       xkb_keymap_new_from_names(xctx, &names, XKB_KEYMAP_COMPILE_NO_FLAGS);
-  char *keymap_str =
-      strdup(xkb_keymap_get_as_string(keymap, XKB_KEYMAP_FORMAT_TEXT_V1));
+  if (!keymap) {
+    xkb_context_unref(xctx);
+    return NULL;
+  }
+  char *keymap_str = xkb_keymap_get_as_string(keymap, XKB_KEYMAP_FORMAT_TEXT_V1);
   xkb_keymap_unref(keymap);
   xkb_context_unref(xctx);
   return keymap_str;
@@ -26,6 +29,8 @@ char *get_keymap_string(char *layout) {
 
 struct fd_len keymap_fd(char *layout) {
   char *keymap = get_keymap_string(layout);
+  if (!keymap)
+    return (struct fd_len){.fd = -1, .len_content = 0};
   char fname[] = "/tmp/waymokbdfd-XXXXXXXXXX";
   int fd = mkstemp(fname);
   if (fd == -1)
@@ -44,6 +49,8 @@ err_cleanup:
 }
 
 bool waymoctx_kbd(waymoctx *ctx, char *layout) {
+  if (!ctx->kman || !ctx->seat)
+    return false;
   ctx->kbd = zwp_virtual_keyboard_manager_v1_create_virtual_keyboard(ctx->kman,
                                                                      ctx->seat);
   struct fd_len fd = keymap_fd(layout);
@@ -60,8 +67,10 @@ bool waymoctx_kbd(waymoctx *ctx, char *layout) {
 }
 
 void waymoctx_destroy_kbd(waymoctx *ctx) {
-    if (ctx->kbd) zwp_virtual_keyboard_v1_destroy(ctx->kbd);
-    if (ctx->kman) zwp_virtual_keyboard_manager_v1_destroy(ctx->kman);
-    ctx->kbd = NULL;
-    ctx->kman = NULL;
+  if (ctx->kbd)
+    zwp_virtual_keyboard_v1_destroy(ctx->kbd);
+  if (ctx->kman)
+    zwp_virtual_keyboard_manager_v1_destroy(ctx->kman);
+  ctx->kbd = NULL;
+  ctx->kman = NULL;
 }
