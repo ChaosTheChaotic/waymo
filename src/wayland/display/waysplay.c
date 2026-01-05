@@ -1,3 +1,4 @@
+#include "event_loop.h"
 #include "waycon.h"
 #include <stdio.h>
 #include <string.h>
@@ -27,13 +28,14 @@ static const struct wl_registry_listener registry_listener = {
     .global = handle_wl_event,
 };
 
-bool waymoctx_connect(waymoctx *ctx) {
+bool waymoctx_connect(waymoctx *ctx, _Atomic loop_status *status) {
   if (ctx == NULL)
     return false;
 
   ctx->display = wl_display_connect(NULL);
   if (ctx->display == NULL) {
     fprintf(stderr, "Wayland connection failed\n");
+    *status |= STATUS_INIT_FAILED;
     return false;
   }
   ctx->registry = wl_display_get_registry(ctx->display);
@@ -44,14 +46,12 @@ bool waymoctx_connect(waymoctx *ctx) {
   if (ctx->kman == NULL) {
     fprintf(stderr,
             "Compositor does not support the virtual keyboard protocol\n");
-    waymoctx_destroy_connect(ctx);
-    return false;
+    *status |= STATUS_KBD_FAILED;
   }
   if (ctx->pman == NULL) {
     fprintf(stderr,
             "Compositor does not support the virtual pointer protocol\n");
-    waymoctx_destroy_connect(ctx);
-    return false;
+    *status |= STATUS_PTR_FAILED;
   }
   if (ctx->seat == NULL) {
     fprintf(stderr, "No seat found\n");

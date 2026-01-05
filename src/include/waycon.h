@@ -1,6 +1,7 @@
 #ifndef WAYCON_H
 #define WAYCON_H
 
+#include "event_loop.h"
 #include "wvk.h"
 #include "wvp.h"
 #include <stdbool.h>
@@ -16,10 +17,10 @@ typedef struct {
   struct zwlr_virtual_pointer_v1 *ptr;
 } waymoctx;
 
-waymoctx *init_waymoctx(char *layout);
+waymoctx *init_waymoctx(char *layout, _Atomic loop_status *status);
 void destroy_waymoctx(waymoctx *ctx);
 
-bool waymoctx_connect(waymoctx *ctx);
+bool waymoctx_connect(waymoctx *ctx, _Atomic loop_status *status);
 void waymoctx_destroy_connect(waymoctx *ctx);
 
 bool waymoctx_kbd(waymoctx *ctx, char *layout);

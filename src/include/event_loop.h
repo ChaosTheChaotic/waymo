@@ -2,6 +2,7 @@
 #define ELT_H
 
 #include <pthread.h>
+#include <semaphore.h>
 #include <stdbool.h>
 
 typedef enum {
@@ -57,10 +58,19 @@ struct eloop_params {
   char *layout;
 };
 
+typedef enum {
+  STATUS_OK = 0,
+  STATUS_INIT_FAILED = 1 << 0, // This error is fatal
+  STATUS_KBD_FAILED = 1 << 1,
+  STATUS_PTR_FAILED = 1 << 2,
+} loop_status;
+
 typedef struct {
   pthread_t thread;
   command_queue *queue;
   char *layout;
+  _Atomic loop_status status;
+  sem_t ready_sem;
 } waymo_event_loop;
 
 waymo_event_loop *create_event_loop(struct eloop_params *params);

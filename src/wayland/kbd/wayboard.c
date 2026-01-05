@@ -21,7 +21,8 @@ char *get_keymap_string(char *layout) {
     xkb_context_unref(xctx);
     return NULL;
   }
-  char *keymap_str = xkb_keymap_get_as_string(keymap, XKB_KEYMAP_FORMAT_TEXT_V1);
+  char *keymap_str =
+      xkb_keymap_get_as_string(keymap, XKB_KEYMAP_FORMAT_TEXT_V1);
   xkb_keymap_unref(keymap);
   xkb_context_unref(xctx);
   return keymap_str;
@@ -57,7 +58,6 @@ bool waymoctx_kbd(waymoctx *ctx, char *layout) {
   if (fd.fd == -1) {
     fprintf(stderr, "Failed to save keymap to fd");
     zwp_virtual_keyboard_v1_destroy(ctx->kbd);
-    waymoctx_destroy_connect(ctx);
     return false;
   };
   zwp_virtual_keyboard_v1_keymap(ctx->kbd, WL_KEYBOARD_KEYMAP_FORMAT_XKB_V1,

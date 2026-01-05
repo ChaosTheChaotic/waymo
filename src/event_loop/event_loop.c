@@ -2,6 +2,7 @@
 #include "waycon.h"
 #include <errno.h>
 #include <pthread.h>
+#include <semaphore.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/epoll.h>
@@ -121,14 +122,24 @@ void execute_command(waymoctx *ctx, command *cmd) {
 
   switch (cmd->type) {
   case CMD_MOUSE_MOVE:
+    if (!ctx->ptr)
+      break;
     break;
   case CMD_MOUSE_CLICK:
+    if (!ctx->ptr)
+      break;
     break;
   case CMD_MOUSE_BTN:
+    if (!ctx->ptr)
+      break;
     break;
   case CMD_KEYBOARD_TYPE:
+    if (!ctx->kbd)
+      break;
     break;
   case CMD_KEYBOARD_KEY:
+    if (!ctx->kbd)
+      break;
     break;
   default:
     break;
@@ -140,7 +151,8 @@ void execute_command(waymoctx *ctx, command *cmd) {
 void *event_loop(void *arg) {
   waymo_event_loop *loop = (waymo_event_loop *)arg;
 
-  waymoctx *ctx = init_waymoctx(loop->layout);
+  waymoctx *ctx = init_waymoctx(loop->layout, &loop->status);
+  sem_post(&loop->ready_sem);
   if (!ctx)
     return NULL;
 
@@ -218,12 +230,17 @@ waymo_event_loop *create_event_loop(struct eloop_params *params) {
     return NULL;
   }
 
+  sem_init(&loop->ready_sem, 0, 0);
+
   if (pthread_create(&loop->thread, NULL, event_loop, loop) != 0) {
     destroy_queue(loop->queue);
     free(loop->layout);
+    sem_destroy(&loop->ready_sem);
     free(loop);
     return NULL;
   }
+  sem_wait(&loop->ready_sem);
+  sem_destroy(&loop->ready_sem);
   return loop;
 }
 

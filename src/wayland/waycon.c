@@ -1,18 +1,25 @@
 #include "waycon.h"
+#include "event_loop.h"
 #include <stdlib.h>
 #include <wayland-client-core.h>
 
-waymoctx *init_waymoctx(char *layout) {
+waymoctx *init_waymoctx(char *layout, _Atomic loop_status *status) {
   waymoctx *ctx = calloc(1, sizeof(waymoctx));
-  if (!ctx)
+  if (!ctx) {
+    *status |= STATUS_INIT_FAILED;
     return NULL;
-  if (!waymoctx_connect(ctx))
+  }
+  if (!waymoctx_connect(ctx, status)) {
     goto err_cleanup;
-  if (!waymoctx_kbd(ctx, layout))
-    goto err_cleanup;
-  if (!waymoctx_pointer(ctx))
-    goto err_cleanup;
+  }
+  if (!waymoctx_kbd(ctx, layout)) {
+    *status |= STATUS_KBD_FAILED;
+  }
+  if (!waymoctx_pointer(ctx)) {
+    *status |= STATUS_PTR_FAILED;
+  }
   wl_display_roundtrip(ctx->display);
+  *status |= STATUS_OK;
   return ctx;
 err_cleanup:
   free(ctx);
