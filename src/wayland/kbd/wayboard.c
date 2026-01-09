@@ -69,8 +69,5 @@ bool waymoctx_kbd(waymoctx *ctx, char *layout) {
 void waymoctx_destroy_kbd(waymoctx *ctx) {
   if (ctx->kbd)
     zwp_virtual_keyboard_v1_destroy(ctx->kbd);
-  if (ctx->kman)
-    zwp_virtual_keyboard_manager_v1_destroy(ctx->kman);
   ctx->kbd = NULL;
-  ctx->kman = NULL;
 }

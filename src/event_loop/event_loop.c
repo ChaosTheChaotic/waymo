@@ -145,7 +145,8 @@ void execute_command(waymoctx *ctx, command *cmd) {
     break;
   }
 
-  wl_display_flush(ctx->display);
+  while (wl_display_flush(ctx->display) > 0)
+    ;
 }
 
 void *event_loop(void *arg) {

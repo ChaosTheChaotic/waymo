@@ -62,8 +62,20 @@ bool waymoctx_connect(waymoctx *ctx, _Atomic loop_status *status) {
 }
 
 void waymoctx_destroy_connect(waymoctx *ctx) {
+  if (!ctx)
+    return;
+
   if (ctx->seat)
     wl_seat_destroy(ctx->seat);
-  wl_registry_destroy(ctx->registry);
-  wl_display_disconnect(ctx->display);
+  if (ctx->kman)
+    zwp_virtual_keyboard_manager_v1_destroy(ctx->kman);
+  if (ctx->pman)
+    zwlr_virtual_pointer_manager_v1_destroy(ctx->pman);
+
+  if (ctx->registry)
+    wl_registry_destroy(ctx->registry);
+  if (ctx->display) {
+    wl_display_disconnect(ctx->display);
+    ctx->display = NULL;
+  }
 }
