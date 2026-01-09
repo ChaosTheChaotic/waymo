@@ -1,7 +1,10 @@
+#define _GNU_SOURCE
+
 #include "waycon.h"
 #include "wvk.h"
 #include <stdlib.h>
 #include <string.h>
+#include <sys/mman.h>
 #include <unistd.h>
 #include <wayland-client-protocol.h>
 #include <xkbcommon/xkbcommon.h>
@@ -32,21 +35,24 @@ struct fd_len keymap_fd(char *layout) {
   char *keymap = get_keymap_string(layout);
   if (!keymap)
     return (struct fd_len){.fd = -1, .len_content = 0};
-  char fname[] = "/tmp/waymokbdfd-XXXXXXXXXX";
-  int fd = mkstemp(fname);
-  if (fd == -1)
-    goto err_cleanup;
-  unlink(fname);
+
   size_t keymap_len = strlen(keymap) + 1;
-  if (write(fd, keymap, keymap_len) == -1)
-    goto err_cleanup;
+
+  int fd = memfd_create("waymo_keymap", MFD_CLOEXEC);
+  if (fd == -1) {
+    free(keymap);
+    return (struct fd_len){.fd = -1, .len_content = 0};
+  }
+
+  if (ftruncate(fd, keymap_len) < 0 || write(fd, keymap, keymap_len) == -1) {
+    close(fd);
+    free(keymap);
+    return (struct fd_len){.fd = -1, .len_content = 0};
+  }
+
   lseek(fd, 0, SEEK_SET);
   free(keymap);
   return (struct fd_len){.fd = fd, .len_content = keymap_len};
-err_cleanup:
-  free(keymap);
-  keymap = NULL;
-  return (struct fd_len){.fd = -1, .len_content = 0};
 }
 
 bool waymoctx_kbd(waymoctx *ctx, char *layout) {
