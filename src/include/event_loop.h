@@ -31,6 +31,7 @@ typedef union {
   struct {
     char key;
     bool down;
+    unsigned long long *hold_len; // This can be null to just go down or not instead of toggle
   } keyboard_key;
   struct {
     char *txt;
@@ -77,10 +78,12 @@ waymo_event_loop *create_event_loop(struct eloop_params *params);
 void destroy_event_loop(waymo_event_loop *loop);
 void send_command(waymo_event_loop *loop, command *cmd);
 
-command *create_mouse_move_cmd(int x, int y);
-command *create_mouse_click_cmd(int button, int clicks);
-command *create_keyboard_type_cmd(const char *text);
-command *create_quit_cmd();
+command* create_mouse_move_cmd(int x, int y, bool relative);
+command* create_mouse_click_cmd(int button, int clicks, unsigned long long click_length);
+command* create_mouse_button_cmd(int button, bool down);
+command* create_keyboard_key_cmd(int key, bool down, unsigned long long *hold_len);
+command* create_keyboard_type_cmd(const char *text);
+command* create_quit_cmd();
 void free_command(command *cmd);
 
 #endif
