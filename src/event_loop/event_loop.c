@@ -77,11 +77,6 @@ command *create_keyboard_key_cmd_ullp(char key, unsigned long long hold_len) {
   return cmd;
 }
 
-#define CREATE_KEYBOARD_KEY_CMD(A, B)                                          \
-  _Generic((B),                                                                \
-      bool: create_keyboard_key_cmd_b,                                         \
-      unsigned long long *: create_keyboard_key_cmd_ullp, )(A)
-
 command *create_keyboard_type_cmd(const char *text) {
   command *cmd = malloc(sizeof(command));
   if (!cmd)

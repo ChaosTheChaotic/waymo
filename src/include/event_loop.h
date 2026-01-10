@@ -98,8 +98,15 @@ void send_command(waymo_event_loop *loop, command *cmd);
 command* create_mouse_move_cmd(int x, int y, bool relative);
 command* create_mouse_click_cmd(int button, int clicks, unsigned long long click_length);
 command* create_mouse_button_cmd(int button, bool down);
+
 command* create_keyboard_key_cmd_b(char key, bool down);
 command* create_keyboard_key_cmd_ullp(char key, unsigned long long hold_len);
+
+#define create_keyboard_key_cmd(A, B)                                          \
+  _Generic((B),                                                                \
+      bool: create_keyboard_key_cmd_b,                                         \
+      unsigned long long *: create_keyboard_key_cmd_ullp, )(A)
+
 command* create_keyboard_type_cmd(const char *text);
 command* create_quit_cmd();
 void free_command(command *cmd);
