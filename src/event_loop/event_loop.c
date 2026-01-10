@@ -10,10 +10,7 @@
 #include <unistd.h>
 #include <wayland-client-core.h>
 
-#define likely(x) __builtin_expect(!!(x), 1)
-#define unlikely(x) __builtin_expect(!!(x), 0)
-
-command* create_quit_cmd() {
+command *create_quit_cmd() {
   command *cmd = malloc(sizeof(command));
   if (!cmd)
     return NULL;
@@ -22,55 +19,52 @@ command* create_quit_cmd() {
   return cmd;
 }
 
-command* create_mouse_move_cmd(int x, int y, bool relative) {
+command *create_mouse_move_cmd(int x, int y, bool relative) {
   command *cmd = malloc(sizeof(command));
   if (!cmd)
     return NULL;
 
   cmd->type = CMD_MOUSE_MOVE;
-  cmd->param = (command_param){
-    .pos = { .x = x, .y = y, .relative = relative }
-  };
+  cmd->param = (command_param){.pos = {.x = x, .y = y, .relative = relative}};
   return cmd;
 }
 
-command* create_mouse_click_cmd(int button, int clicks, unsigned long long click_length) {
+command *create_mouse_click_cmd(int button, int clicks,
+                                unsigned long long click_length) {
   command *cmd = malloc(sizeof(command));
   if (!cmd)
     return NULL;
 
   cmd->type = CMD_MOUSE_CLICK;
-  cmd->param = (command_param){
-    .mouse_click = { .button = button, .clicks = clicks, .click_length = click_length}
-  };
+  cmd->param = (command_param){.mouse_click = {.button = button,
+                                               .clicks = clicks,
+                                               .click_length = click_length}};
   return cmd;
 }
 
-command* create_mouse_button_cmd(int button, bool down) {
+command *create_mouse_button_cmd(int button, bool down) {
   command *cmd = malloc(sizeof(command));
   if (!cmd)
     return NULL;
 
   cmd->type = CMD_MOUSE_BTN;
-  cmd->param = (command_param){
-    .mouse_btn = { .button = button, .down = down }
-  };
+  cmd->param = (command_param){.mouse_btn = {.button = button, .down = down}};
   return cmd;
 }
 
-command* create_keyboard_key_cmd(int key, bool down, unsigned long long *hold_len) {
+command *create_keyboard_key_cmd(int key, bool down,
+                                 unsigned long long *hold_len) {
   command *cmd = malloc(sizeof(command));
   if (!cmd)
     return NULL;
 
   cmd->type = CMD_KEYBOARD_KEY;
   cmd->param = (command_param){
-    .keyboard_key = { .key = key, .down = down, .hold_len = hold_len }
-  };
+      .keyboard_key = {.key = key, .down = down, .hold_len = hold_len}};
   return cmd;
 }
 
-command* create_keyboard_type_cmd(const char *text) {
+command *create_keyboard_type_cmd(const char *text) {
   command *cmd = malloc(sizeof(command));
   if (!cmd)
     return NULL;
@@ -78,9 +72,7 @@ command* create_keyboard_type_cmd(const char *text) {
   char *txt = strdup(text);
 
   cmd->type = CMD_KEYBOARD_TYPE;
-  cmd->param = (command_param){
-    .kbd = { .txt = txt }
-  };
+  cmd->param = (command_param){.kbd = {.txt = txt}};
   return cmd;
 }
 
@@ -190,22 +182,27 @@ void execute_command(waymoctx *ctx, command *cmd) {
   case CMD_MOUSE_MOVE:
     if (!ctx->ptr)
       break;
+    emouse_move(ctx, &cmd->param);
     break;
   case CMD_MOUSE_CLICK:
     if (!ctx->ptr)
       break;
+    emouse_click(ctx, &cmd->param);
     break;
   case CMD_MOUSE_BTN:
     if (!ctx->ptr)
       break;
+    emouse_btn(ctx, &cmd->param);
     break;
   case CMD_KEYBOARD_TYPE:
     if (!ctx->kbd)
       break;
+    ekbd_type(ctx, &cmd->param);
     break;
   case CMD_KEYBOARD_KEY:
     if (!ctx->kbd)
       break;
+    ekbd_key(ctx, &cmd->param);
     break;
   default:
     break;
@@ -312,7 +309,8 @@ waymo_event_loop *create_event_loop(struct eloop_params *params) {
 }
 
 void send_command(waymo_event_loop *loop, command *cmd) {
-  if (unlikely(!loop || !cmd)) return;
+  if (unlikely(!loop || !cmd))
+    return;
 
   if (!add_queue(loop->queue, cmd)) {
     // Queue is full or shutting down

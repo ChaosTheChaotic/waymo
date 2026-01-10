@@ -77,3 +77,17 @@ void waymoctx_destroy_kbd(waymoctx *ctx) {
     zwp_virtual_keyboard_v1_destroy(ctx->kbd);
   ctx->kbd = NULL;
 }
+
+void ekbd_key(waymoctx *ctx, command_param *param) {
+  if (unlikely(!ctx || !param || !ctx->kbd))
+    return;
+
+  //
+}
+
+void ekbd_type(waymoctx *ctx, command_param *param) {
+  if (unlikely(!ctx || !param || !ctx->kbd))
+    return;
+
+  //
+}

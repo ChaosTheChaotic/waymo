@@ -5,6 +5,28 @@
 #include <wayland-client-core.h>
 #include <wayland-client-protocol.h>
 
+static void handle_output_mode(void *data, struct wl_output *wl_output,
+                               uint32_t flags, int32_t width, int32_t height,
+                               int32_t refresh) {
+  waymoctx *wctx = data;
+  if (flags & WL_OUTPUT_MODE_CURRENT) {
+    wctx->screen_width = (uint32_t)width;
+    wctx->screen_height = (uint32_t)height;
+  }
+}
+
+// Incase this is needed later
+static void handle_output_scale(void *data, struct wl_output *wl_output,
+                                int32_t factor) {
+  waymoctx *wctx = data;
+  wctx->scale_factor = factor;
+}
+
+static const struct wl_output_listener output_listener = {
+    .mode = handle_output_mode,
+    .scale = handle_output_scale,
+};
+
 // The following was taken from wtype and modified for the uess of this library
 static void handle_wl_event(void *data, struct wl_registry *registry,
                             uint32_t name, const char *interface,
@@ -21,6 +43,12 @@ static void handle_wl_event(void *data, struct wl_registry *registry,
                      zwlr_virtual_pointer_manager_v1_interface.name)) {
     wctx->pman = wl_registry_bind(
         registry, name, &zwlr_virtual_pointer_manager_v1_interface, 2);
+  }
+
+  if (!strcmp(interface, wl_output_interface.name)) {
+    struct wl_output *out =
+        wl_registry_bind(registry, name, &wl_output_interface, 1);
+    wl_output_add_listener(out, &output_listener, wctx);
   }
 }
 

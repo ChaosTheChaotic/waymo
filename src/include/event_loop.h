@@ -5,6 +5,9 @@
 #include <semaphore.h>
 #include <stdbool.h>
 
+#define likely(x) __builtin_expect(!!(x), 1)
+#define unlikely(x) __builtin_expect(!!(x), 0)
+
 typedef enum {
   CMD_MOUSE_MOVE,    // Takes x, y and if movement should be relative
   CMD_MOUSE_CLICK,   // Takes the button and num clicks
@@ -14,18 +17,24 @@ typedef enum {
   CMD_QUIT,
 } command_type;
 
+typedef enum {
+  MBTN_LEFT,
+  MBTN_RIGHT,
+  MBTN_MID,
+}MBTNS;
+
 typedef union {
   struct {
     int x, y;
     bool relative;
   } pos;
   struct {
-    int button;
+    MBTNS button;
     unsigned int clicks;
     unsigned long long click_length;
   } mouse_click;
   struct {
-    int button;
+    MBTNS button;
     bool down;
   } mouse_btn;
   struct {
