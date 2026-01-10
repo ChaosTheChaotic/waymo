@@ -15,6 +15,7 @@ option(USE_LTO "Use linktime optimizations if available" ON)
 option(BUILD_SHARED "Build a shared library for the system" ON)
 option(BUILD_STATIC "Build a static library for the system" ON)
 option(GENERATE_PROTOCOLS "Generate Wayland protocol files if needed" ON)
+option(MARCH_NATIVE "Build library optimized for native arch" ON)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -42,7 +43,7 @@ if(HAS_O3)
   target_compile_options(waymo_settings INTERFACE -O3)
 endif()
 
-if (HAS_MARCH_NATIVE)
+if (HAS_MARCH_NATIVE AND MARCH_NATIVE)
   target_compile_options(waymo_settings INTERFACE -march=native)
 endif()
 
