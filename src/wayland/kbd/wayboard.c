@@ -68,6 +68,7 @@ bool waymoctx_kbd(waymoctx *ctx, char *layout) {
   zwp_virtual_keyboard_v1_keymap(ctx->kbd, WL_KEYBOARD_KEYMAP_FORMAT_XKB_V1,
                                  fd.fd, fd.len_content);
   close(fd.fd);
+  wl_display_roundtrip(ctx->display);
   return true;
 }
 
@@ -109,25 +110,20 @@ void ekbd_key(waymo_event_loop *loop, waymoctx *ctx, command_param *param) {
   wl_display_flush(ctx->display);
 }
 
-void ekbd_type(waymoctx *ctx, command_param *param) {
-  if (unlikely(!ctx || !param || !ctx->kbd))
+void ekbd_type(waymo_event_loop *loop, waymoctx *ctx, command_param *param) {
+  if (unlikely(!ctx || !param || !ctx->kbd || !param->kbd.txt))
     return;
 
-  unsigned long txt_len = strlen(param->kbd.txt);
-  for (unsigned long i = 0; i < txt_len; i++) {
-    struct Key key = chartokey(param->kbd.txt[i]);
-    if (key.shift) {
-      zwp_virtual_keyboard_v1_key(ctx->kbd, timestamp(), KEY_LEFTSHIFT,
-                                  WL_KEYBOARD_KEY_STATE_PRESSED);
-    }
-    zwp_virtual_keyboard_v1_key(ctx->kbd, timestamp(), key.keycode,
-                                WL_KEYBOARD_KEY_STATE_PRESSED);
-    zwp_virtual_keyboard_v1_key(ctx->kbd, timestamp(), key.keycode,
-                                WL_KEYBOARD_KEY_STATE_RELEASED);
-    if (key.shift) {
-      zwp_virtual_keyboard_v1_key(ctx->kbd, timestamp(), KEY_LEFTSHIFT,
-                                  WL_KEYBOARD_KEY_STATE_RELEASED);
-    }
-  }
+  struct pending_action *act = malloc(sizeof(struct pending_action));
+  if (!act) return;
+
+  act->type = ACTION_TYPE_STEP;
+  act->expiry_ms = timestamp(); // Start immediately
+  // Command might be freed after execute_command so dupe string
+  act->data.type_txt.txt = strdup(param->kbd.txt); 
+  act->data.type_txt.index = 0;
+  act->next = NULL;
+
+  schedule_action(loop, act);
   wl_display_flush(ctx->display);
 }

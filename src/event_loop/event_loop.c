@@ -1,6 +1,6 @@
 #include "event_loop.h"
-#include "bits/time.h"
 #include "waycon.h"
+#include <bits/time.h>
 #include <errno.h>
 #include <pthread.h>
 #include <semaphore.h>
@@ -34,6 +34,16 @@ void schedule_action(waymo_event_loop *loop, struct pending_action *action) {
   action->next = *curr;
   *curr = action;
   update_timer(loop);
+}
+
+void clear_pending_actions(waymo_event_loop *loop) {
+  struct pending_action *curr = loop->pending_head;
+  while (curr) {
+    struct pending_action *next = curr->next;
+    free(curr);
+    curr = next;
+  }
+  loop->pending_head = NULL;
 }
 
 void handle_timer_expiry(waymo_event_loop *loop, waymoctx *ctx) {
@@ -72,7 +82,37 @@ void handle_timer_expiry(waymo_event_loop *loop, waymoctx *ctx) {
           next_step->data.click.remaining--;
         schedule_action(loop, next_step);
       }
+    } else if (act->type == ACTION_TYPE_STEP) {
+    char c = act->data.type_txt.txt[act->data.type_txt.index];
+    if (c != '\0') {
+        struct Key key = chartokey(c);
+        if (key.keycode != 0) {
+            // Press and immediately release
+            if (key.shift)
+                zwp_virtual_keyboard_v1_key(ctx->kbd, timestamp(), KEY_LEFTSHIFT, WL_KEYBOARD_KEY_STATE_PRESSED);
+            
+            zwp_virtual_keyboard_v1_key(ctx->kbd, timestamp(), key.keycode, WL_KEYBOARD_KEY_STATE_PRESSED);
+            zwp_virtual_keyboard_v1_key(ctx->kbd, timestamp(), key.keycode, WL_KEYBOARD_KEY_STATE_RELEASED);
+            
+            if (key.shift)
+                zwp_virtual_keyboard_v1_key(ctx->kbd, timestamp(), KEY_LEFTSHIFT, WL_KEYBOARD_KEY_STATE_RELEASED);
+        }
+
+        // Schedule next character
+        if (act->data.type_txt.txt[act->data.type_txt.index + 1] != '\0') {
+            struct pending_action *next_char = malloc(sizeof(struct pending_action));
+            next_char->type = ACTION_TYPE_STEP;
+            next_char->expiry_ms = now + 20; // 20ms delay between keys (default for now)
+            next_char->data.type_txt.txt = act->data.type_txt.txt;
+            next_char->data.type_txt.index = act->data.type_txt.index + 1;
+            next_char->next = NULL;
+            schedule_action(loop, next_char);
+        } else {
+            // End of string
+            free(act->data.type_txt.txt);
+        }
     }
+}
 
     wl_display_flush(ctx->display);
     free(act);
@@ -275,7 +315,7 @@ void execute_command(waymo_event_loop *loop, waymoctx *ctx, command *cmd) {
   case CMD_KEYBOARD_TYPE:
     if (!ctx->kbd)
       break;
-    ekbd_type(ctx, &cmd->param);
+    ekbd_type(loop, ctx, &cmd->param);
     break;
   case CMD_KEYBOARD_KEY:
     if (!ctx->kbd)
@@ -367,6 +407,7 @@ void *event_loop(void *arg) {
   }
 
 loop_exit:
+  clear_pending_actions(loop);
   close(epoll_fd);
   if (loop->timer_fd >= 0) {
     close(loop->timer_fd);

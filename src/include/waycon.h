@@ -37,7 +37,7 @@ void emouse_move(waymoctx *ctx, command_param *param);
 void emouse_click(waymo_event_loop *loop, waymoctx *ctx, command_param *param);
 void emouse_btn(waymoctx *ctx, command_param *param);
 
-void ekbd_type(waymoctx *ctx, command_param *param);
+void ekbd_type(waymo_event_loop *loop, waymoctx *ctx, command_param *param);
 void ekbd_key(waymo_event_loop *loop, waymoctx *ctx, command_param *param);
 
 static inline uint32_t mbtnstoliec(MBTNS btn) {
