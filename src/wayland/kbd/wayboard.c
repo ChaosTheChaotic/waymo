@@ -6,7 +6,6 @@
 #include <string.h>
 #include <sys/mman.h>
 #include <unistd.h>
-#include <wayland-client-protocol.h>
 #include <xkbcommon/xkbcommon.h>
 
 struct fd_len {
@@ -82,12 +81,53 @@ void ekbd_key(waymoctx *ctx, command_param *param) {
   if (unlikely(!ctx || !param || !ctx->kbd))
     return;
 
-  //
+  struct Key key = chartokey(param->keyboard_key.key);
+  if (param->keyboard_key.active_opt == DOWN) {
+    enum wl_keyboard_key_state down = param->keyboard_key.keyboard_key_mod.down
+                                          ? WL_KEYBOARD_KEY_STATE_PRESSED
+                                          : WL_KEYBOARD_KEY_STATE_RELEASED;
+    if (key.shift) {
+      zwp_virtual_keyboard_v1_key(ctx->kbd, timestamp(), KEY_LEFTSHIFT, down);
+    }
+    zwp_virtual_keyboard_v1_key(ctx->kbd, timestamp(), key.keycode, down);
+  } else {
+    if (key.shift) {
+      zwp_virtual_keyboard_v1_key(ctx->kbd, timestamp(), KEY_LEFTSHIFT,
+                                  WL_KEYBOARD_KEY_STATE_PRESSED);
+    }
+    zwp_virtual_keyboard_v1_key(ctx->kbd, timestamp(), key.keycode,
+                                WL_KEYBOARD_KEY_STATE_PRESSED);
+    wl_display_flush(ctx->display);
+    usleep(param->keyboard_key.keyboard_key_mod.hold_len);
+    zwp_virtual_keyboard_v1_key(ctx->kbd, timestamp(), key.keycode,
+                                WL_KEYBOARD_KEY_STATE_RELEASED);
+    if (key.shift) {
+      zwp_virtual_keyboard_v1_key(ctx->kbd, timestamp(), KEY_LEFTSHIFT,
+                                  WL_KEYBOARD_KEY_STATE_RELEASED);
+    }
+  }
+  wl_display_flush(ctx->display);
 }
 
 void ekbd_type(waymoctx *ctx, command_param *param) {
   if (unlikely(!ctx || !param || !ctx->kbd))
     return;
 
-  //
+  unsigned long txt_len = strlen(param->kbd.txt);
+  for (unsigned long i = 0; i < txt_len; i++) {
+    struct Key key = chartokey(param->kbd.txt[i]);
+    if (key.shift) {
+      zwp_virtual_keyboard_v1_key(ctx->kbd, timestamp(), KEY_LEFTSHIFT,
+                                  WL_KEYBOARD_KEY_STATE_PRESSED);
+    }
+    zwp_virtual_keyboard_v1_key(ctx->kbd, timestamp(), key.keycode,
+                                WL_KEYBOARD_KEY_STATE_PRESSED);
+    zwp_virtual_keyboard_v1_key(ctx->kbd, timestamp(), key.keycode,
+                                WL_KEYBOARD_KEY_STATE_RELEASED);
+    if (key.shift) {
+      zwp_virtual_keyboard_v1_key(ctx->kbd, timestamp(), KEY_LEFTSHIFT,
+                                  WL_KEYBOARD_KEY_STATE_RELEASED);
+    }
+  }
+  wl_display_flush(ctx->display);
 }

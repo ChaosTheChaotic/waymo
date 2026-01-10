@@ -23,6 +23,11 @@ typedef enum {
   MBTN_MID,
 }MBTNS;
 
+enum KMODOPT {
+  DOWN,
+  HOLD,
+};
+
 typedef union {
   struct {
     int x, y;
@@ -39,8 +44,11 @@ typedef union {
   } mouse_btn;
   struct {
     char key;
-    bool down;
-    unsigned long long *hold_len; // This can be null to just go down or not instead of toggle
+    enum KMODOPT active_opt;
+    union {
+      bool down;
+      unsigned long long hold_len;
+    } keyboard_key_mod;
   } keyboard_key;
   struct {
     char *txt;
@@ -90,7 +98,8 @@ void send_command(waymo_event_loop *loop, command *cmd);
 command* create_mouse_move_cmd(int x, int y, bool relative);
 command* create_mouse_click_cmd(int button, int clicks, unsigned long long click_length);
 command* create_mouse_button_cmd(int button, bool down);
-command* create_keyboard_key_cmd(int key, bool down, unsigned long long *hold_len);
+command* create_keyboard_key_cmd_b(char key, bool down);
+command* create_keyboard_key_cmd_ullp(char key, unsigned long long hold_len);
 command* create_keyboard_type_cmd(const char *text);
 command* create_quit_cmd();
 void free_command(command *cmd);

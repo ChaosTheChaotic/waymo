@@ -52,17 +52,35 @@ command *create_mouse_button_cmd(int button, bool down) {
   return cmd;
 }
 
-command *create_keyboard_key_cmd(int key, bool down,
-                                 unsigned long long *hold_len) {
+command *create_keyboard_key_cmd_b(char key, bool down) {
   command *cmd = malloc(sizeof(command));
   if (!cmd)
     return NULL;
 
   cmd->type = CMD_KEYBOARD_KEY;
   cmd->param = (command_param){
-      .keyboard_key = {.key = key, .down = down, .hold_len = hold_len}};
+      .keyboard_key = {
+          .key = key, .active_opt = DOWN, .keyboard_key_mod = {.down = down}}};
   return cmd;
 }
+
+command *create_keyboard_key_cmd_ullp(char key, unsigned long long hold_len) {
+  command *cmd = malloc(sizeof(command));
+  if (!cmd)
+    return NULL;
+
+  cmd->type = CMD_KEYBOARD_KEY;
+  cmd->param = (command_param){
+      .keyboard_key = {.key = key,
+                       .active_opt = HOLD,
+                       .keyboard_key_mod = {.hold_len = hold_len}}};
+  return cmd;
+}
+
+#define CREATE_KEYBOARD_KEY_CMD(A, B)                                          \
+  _Generic((B),                                                                \
+      bool: create_keyboard_key_cmd_b,                                         \
+      unsigned long long *: create_keyboard_key_cmd_ullp, )(A)
 
 command *create_keyboard_type_cmd(const char *text) {
   command *cmd = malloc(sizeof(command));
@@ -84,10 +102,6 @@ void free_command(command *cmd) {
   case CMD_KEYBOARD_TYPE:
     free(cmd->param.kbd.txt);
     cmd->param.kbd.txt = NULL;
-    break;
-  case CMD_KEYBOARD_KEY:
-    free(cmd->param.keyboard_key.hold_len);
-    cmd->param.keyboard_key.hold_len = NULL;
     break;
   default:
     break;

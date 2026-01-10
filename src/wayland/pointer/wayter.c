@@ -67,5 +67,7 @@ void emouse_click(waymoctx *ctx, command_param *param) {
 
     zwlr_virtual_pointer_v1_button(ctx->ptr, timestamp(), button,
                                    WL_POINTER_BUTTON_STATE_RELEASED);
+    zwlr_virtual_pointer_v1_frame(ctx->ptr);
+    wl_display_flush(ctx->display);
   }
 }
