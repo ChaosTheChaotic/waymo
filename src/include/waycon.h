@@ -55,6 +55,7 @@ static inline uint32_t mbtnstoliec(MBTNS btn) {
       return BTN_RIGHT;
     case MBTN_MID:
       return BTN_MIDDLE;
+    default: return 0;
   }
 }
 
