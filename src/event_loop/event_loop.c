@@ -1,4 +1,5 @@
 #include "event_loop.h"
+#include "bits/time.h"
 #include "waycon.h"
 #include <errno.h>
 #include <pthread.h>
@@ -7,8 +8,77 @@
 #include <string.h>
 #include <sys/epoll.h>
 #include <sys/eventfd.h>
+#include <sys/timerfd.h>
 #include <unistd.h>
 #include <wayland-client-core.h>
+
+void update_timer(waymo_event_loop *loop) {
+  if (!loop->pending_head)
+    return;
+
+  uint64_t now = timestamp();
+  uint64_t diff = (loop->pending_head->expiry_ms > now)
+                      ? (loop->pending_head->expiry_ms - now)
+                      : 1;
+
+  struct itimerspec new_val = {
+      .it_value = {.tv_sec = diff / 1000, .tv_nsec = (diff % 1000) * 1000000}};
+  timerfd_settime(loop->timer_fd, 0, &new_val, NULL);
+}
+
+void schedule_action(waymo_event_loop *loop, struct pending_action *action) {
+  struct pending_action **curr = &loop->pending_head;
+  while (*curr && (*curr)->expiry_ms < action->expiry_ms) {
+    curr = &((*curr)->next);
+  }
+  action->next = *curr;
+  *curr = action;
+  update_timer(loop);
+}
+
+void handle_timer_expiry(waymo_event_loop *loop, waymoctx *ctx) {
+  uint64_t now = timestamp();
+  while (loop->pending_head && loop->pending_head->expiry_ms <= now) {
+    struct pending_action *act = loop->pending_head;
+    loop->pending_head = act->next;
+
+    if (act->type == ACTION_KEY_RELEASE) {
+      zwp_virtual_keyboard_v1_key(ctx->kbd, timestamp(), act->data.key.keycode,
+                                  WL_KEYBOARD_KEY_STATE_RELEASED);
+      if (act->data.key.shift)
+        zwp_virtual_keyboard_v1_key(ctx->kbd, timestamp(), KEY_LEFTSHIFT,
+                                    WL_KEYBOARD_KEY_STATE_RELEASED);
+    } else if (act->type == ACTION_MOUSE_RELEASE) {
+      zwlr_virtual_pointer_v1_button(ctx->ptr, timestamp(),
+                                     act->data.mouse.button,
+                                     WL_POINTER_BUTTON_STATE_RELEASED);
+      zwlr_virtual_pointer_v1_frame(ctx->ptr);
+    } else if (act->type == ACTION_CLICK_STEP) {
+      // Toggle state and reschedule if clicks remain
+      uint32_t state = act->data.click.is_down
+                           ? WL_POINTER_BUTTON_STATE_RELEASED
+                           : WL_POINTER_BUTTON_STATE_PRESSED;
+      zwlr_virtual_pointer_v1_button(ctx->ptr, timestamp(),
+                                     act->data.click.button, state);
+      zwlr_virtual_pointer_v1_frame(ctx->ptr);
+
+      if (act->data.click.is_down || act->data.click.remaining > 1) {
+        struct pending_action *next_step =
+            malloc(sizeof(struct pending_action));
+        *next_step = *act;
+        next_step->expiry_ms = now + act->data.click.ms;
+        next_step->data.click.is_down = !act->data.click.is_down;
+        if (!next_step->data.click.is_down)
+          next_step->data.click.remaining--;
+        schedule_action(loop, next_step);
+      }
+    }
+
+    wl_display_flush(ctx->display);
+    free(act);
+  }
+  update_timer(loop);
+}
 
 command *create_quit_cmd() {
   command *cmd = malloc(sizeof(command));
@@ -29,8 +99,7 @@ command *create_mouse_move_cmd(int x, int y, bool relative) {
   return cmd;
 }
 
-command *create_mouse_click_cmd(int button, int clicks,
-                                unsigned long long click_length) {
+command *create_mouse_click_cmd(int button, int clicks, uint32_t click_ms) {
   command *cmd = malloc(sizeof(command));
   if (!cmd)
     return NULL;
@@ -38,7 +107,7 @@ command *create_mouse_click_cmd(int button, int clicks,
   cmd->type = CMD_MOUSE_CLICK;
   cmd->param = (command_param){.mouse_click = {.button = button,
                                                .clicks = clicks,
-                                               .click_length = click_length}};
+                                               .click_ms = click_ms}};
   return cmd;
 }
 
@@ -64,7 +133,7 @@ command *create_keyboard_key_cmd_b(char key, bool down) {
   return cmd;
 }
 
-command *create_keyboard_key_cmd_ullp(char key, unsigned long long hold_len) {
+command *create_keyboard_key_cmd_uintt(char key, uint32_t hold_ms) {
   command *cmd = malloc(sizeof(command));
   if (!cmd)
     return NULL;
@@ -73,7 +142,7 @@ command *create_keyboard_key_cmd_ullp(char key, unsigned long long hold_len) {
   cmd->param = (command_param){
       .keyboard_key = {.key = key,
                        .active_opt = HOLD,
-                       .keyboard_key_mod = {.hold_len = hold_len}}};
+                       .keyboard_key_mod = {.hold_ms = hold_ms}}};
   return cmd;
 }
 
@@ -183,7 +252,7 @@ command *remove_queue(command_queue *q) {
   return cmd;
 }
 
-void execute_command(waymoctx *ctx, command *cmd) {
+void execute_command(waymo_event_loop *loop, waymoctx *ctx, command *cmd) {
   if (!ctx || !cmd)
     return;
 
@@ -196,7 +265,7 @@ void execute_command(waymoctx *ctx, command *cmd) {
   case CMD_MOUSE_CLICK:
     if (!ctx->ptr)
       break;
-    emouse_click(ctx, &cmd->param);
+    emouse_click(loop, ctx, &cmd->param);
     break;
   case CMD_MOUSE_BTN:
     if (!ctx->ptr)
@@ -211,7 +280,7 @@ void execute_command(waymoctx *ctx, command *cmd) {
   case CMD_KEYBOARD_KEY:
     if (!ctx->kbd)
       break;
-    ekbd_key(ctx, &cmd->param);
+    ekbd_key(loop, ctx, &cmd->param);
     break;
   default:
     break;
@@ -232,13 +301,21 @@ void *event_loop(void *arg) {
   int epoll_fd = epoll_create1(EPOLL_CLOEXEC);
   int wayland_fd = wl_display_get_fd(ctx->display);
 
+  loop->timer_fd = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK | TFD_CLOEXEC);
+  if (loop->timer_fd == -1)
+    goto loop_exit;
+
   struct epoll_event ev_wayland = {.events = EPOLLIN, .data.fd = wayland_fd};
   struct epoll_event ev_cmd = {.events = EPOLLIN, .data.fd = loop->queue->fd};
+  struct epoll_event ev_timer = {.events = EPOLLIN, .data.fd = loop->timer_fd};
 
   epoll_ctl(epoll_fd, EPOLL_CTL_ADD, wayland_fd, &ev_wayland);
   epoll_ctl(epoll_fd, EPOLL_CTL_ADD, loop->queue->fd, &ev_cmd);
+  epoll_ctl(epoll_fd, EPOLL_CTL_ADD, loop->timer_fd, &ev_timer);
 
-  struct epoll_event events[2];
+#define EVENTS_NUM 3
+
+  struct epoll_event events[EVENTS_NUM];
 
   while (true) {
     // Dispatch any internal Wayland events before sleeping
@@ -247,7 +324,8 @@ void *event_loop(void *arg) {
     }
     wl_display_flush(ctx->display);
 
-    int nfds = epoll_wait(epoll_fd, events, 2, -1); // Block until event
+    int nfds =
+        epoll_wait(epoll_fd, events, EVENTS_NUM, -1); // Block until event
     if (nfds < 0 && errno != EINTR)
       break;
 
@@ -270,9 +348,13 @@ void *event_loop(void *arg) {
             free_command(cmd);
             goto loop_exit;
           }
-          execute_command(ctx, cmd);
+          execute_command(loop, ctx, cmd);
           free_command(cmd);
         }
+      } else if (events[i].data.fd == loop->timer_fd) {
+        uint64_t expirations;
+        read(loop->timer_fd, &expirations, sizeof(uint64_t));
+        handle_timer_expiry(loop, ctx);
       }
     }
 
@@ -286,6 +368,9 @@ void *event_loop(void *arg) {
 
 loop_exit:
   close(epoll_fd);
+  if (loop->timer_fd >= 0) {
+    close(loop->timer_fd);
+  }
   destroy_waymoctx(ctx);
   return NULL;
 }
@@ -341,6 +426,10 @@ void destroy_event_loop(waymo_event_loop *loop) {
 
   if (loop->queue != NULL) {
     destroy_queue(loop->queue);
+  }
+
+  if (loop->timer_fd >= 0) {
+    close(loop->timer_fd);
   }
 
   free(loop->layout);

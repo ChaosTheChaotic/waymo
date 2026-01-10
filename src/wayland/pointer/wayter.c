@@ -1,5 +1,6 @@
 #include "event_loop.h"
 #include "waycon.h"
+#include <stdlib.h>
 #include <unistd.h>
 
 bool waymoctx_pointer(waymoctx *ctx) {
@@ -54,7 +55,7 @@ void emouse_btn(waymoctx *ctx, command_param *param) {
   wl_display_flush(ctx->display);
 }
 
-void emouse_click(waymoctx *ctx, command_param *param) {
+void emouse_click(waymo_event_loop *loop, waymoctx *ctx, command_param *param) {
   if (unlikely(!ctx || !ctx->ptr || !param))
     return;
 
@@ -62,17 +63,18 @@ void emouse_click(waymoctx *ctx, command_param *param) {
   if (button == 0)
     return;
 
-  for (unsigned int i = 0; i < param->mouse_click.clicks; i++) {
-    zwlr_virtual_pointer_v1_button(ctx->ptr, timestamp(), button,
-                                   WL_POINTER_BUTTON_STATE_PRESSED);
+  zwlr_virtual_pointer_v1_button(ctx->ptr, timestamp(), button,
+                                 WL_POINTER_BUTTON_STATE_PRESSED);
+  zwlr_virtual_pointer_v1_frame(ctx->ptr);
+  wl_display_flush(ctx->display);
 
-    if (param->mouse_click.click_length > 0) {
-      usleep(param->mouse_click.click_length);
-    }
-
-    zwlr_virtual_pointer_v1_button(ctx->ptr, timestamp(), button,
-                                   WL_POINTER_BUTTON_STATE_RELEASED);
-    zwlr_virtual_pointer_v1_frame(ctx->ptr);
-    wl_display_flush(ctx->display);
-  }
+  // Schedule the release and other clicks
+  struct pending_action *act = malloc(sizeof(struct pending_action));
+  act->expiry_ms = timestamp() + param->mouse_click.click_ms;
+  act->type = ACTION_CLICK_STEP;
+  act->data.click.button = button;
+  act->data.click.ms = param->mouse_click.click_ms;
+  act->data.click.remaining = param->mouse_click.clicks;
+  act->data.click.is_down = true; // We are currently down, next step is up
+  schedule_action(loop, act);
 }

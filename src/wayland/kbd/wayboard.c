@@ -77,7 +77,7 @@ void waymoctx_destroy_kbd(waymoctx *ctx) {
   ctx->kbd = NULL;
 }
 
-void ekbd_key(waymoctx *ctx, command_param *param) {
+void ekbd_key(waymo_event_loop *loop, waymoctx *ctx, command_param *param) {
   if (unlikely(!ctx || !param || !ctx->kbd))
     return;
 
@@ -91,20 +91,20 @@ void ekbd_key(waymoctx *ctx, command_param *param) {
     }
     zwp_virtual_keyboard_v1_key(ctx->kbd, timestamp(), key.keycode, down);
   } else {
-    if (key.shift) {
+    if (key.shift)
       zwp_virtual_keyboard_v1_key(ctx->kbd, timestamp(), KEY_LEFTSHIFT,
                                   WL_KEYBOARD_KEY_STATE_PRESSED);
-    }
     zwp_virtual_keyboard_v1_key(ctx->kbd, timestamp(), key.keycode,
                                 WL_KEYBOARD_KEY_STATE_PRESSED);
     wl_display_flush(ctx->display);
-    usleep(param->keyboard_key.keyboard_key_mod.hold_len);
-    zwp_virtual_keyboard_v1_key(ctx->kbd, timestamp(), key.keycode,
-                                WL_KEYBOARD_KEY_STATE_RELEASED);
-    if (key.shift) {
-      zwp_virtual_keyboard_v1_key(ctx->kbd, timestamp(), KEY_LEFTSHIFT,
-                                  WL_KEYBOARD_KEY_STATE_RELEASED);
-    }
+
+    // Schedule Release
+    struct pending_action *act = malloc(sizeof(struct pending_action));
+    act->expiry_ms = timestamp() + param->keyboard_key.keyboard_key_mod.hold_ms;
+    act->type = ACTION_KEY_RELEASE;
+    act->data.key.keycode = key.keycode;
+    act->data.key.shift = key.shift;
+    schedule_action(loop, act);
   }
   wl_display_flush(ctx->display);
 }

@@ -4,6 +4,7 @@
 #include <pthread.h>
 #include <semaphore.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 #define likely(x) __builtin_expect(!!(x), 1)
 #define unlikely(x) __builtin_expect(!!(x), 0)
@@ -36,7 +37,7 @@ typedef union {
   struct {
     MBTNS button;
     unsigned int clicks;
-    unsigned long long click_length;
+    uint32_t click_ms;
   } mouse_click;
   struct {
     MBTNS button;
@@ -47,13 +48,27 @@ typedef union {
     enum KMODOPT active_opt;
     union {
       bool down;
-      unsigned long long hold_len;
+      uint32_t hold_ms;
     } keyboard_key_mod;
   } keyboard_key;
   struct {
     char *txt;
   } kbd;
 } command_param;
+
+// For non blocking delays
+enum action_type { ACTION_KEY_RELEASE, ACTION_MOUSE_RELEASE, ACTION_CLICK_STEP };
+
+struct pending_action {
+    uint64_t expiry_ms;
+    enum action_type type;
+    union {
+        struct { uint32_t keycode; bool shift; } key;
+        struct { uint32_t button; } mouse;
+        struct { uint32_t button; uint32_t ms; unsigned int remaining; bool is_down; } click;
+    } data;
+    struct pending_action *next;
+};
 
 typedef struct {
   command_type type;
@@ -89,6 +104,8 @@ typedef struct {
   char *layout;
   _Atomic loop_status status;
   sem_t ready_sem;
+  int timer_fd;
+  struct pending_action *pending_head;
 } waymo_event_loop;
 
 waymo_event_loop *create_event_loop(struct eloop_params *params);
@@ -96,19 +113,27 @@ void destroy_event_loop(waymo_event_loop *loop);
 void send_command(waymo_event_loop *loop, command *cmd);
 
 command* create_mouse_move_cmd(int x, int y, bool relative);
-command* create_mouse_click_cmd(int button, int clicks, unsigned long long click_length);
+command* create_mouse_click_cmd(int button, int clicks, uint32_t click_ms);
 command* create_mouse_button_cmd(int button, bool down);
 
 command* create_keyboard_key_cmd_b(char key, bool down);
-command* create_keyboard_key_cmd_ullp(char key, unsigned long long hold_len);
+command* create_keyboard_key_cmd_uintt(char key, uint32_t hold_ms);
 
 #define create_keyboard_key_cmd(A, B)                                          \
   _Generic((B),                                                                \
       bool: create_keyboard_key_cmd_b,                                         \
-      unsigned long long *: create_keyboard_key_cmd_ullp, )(A)
+      uint32_t: create_keyboard_key_cmd_uintt, )(A)
 
 command* create_keyboard_type_cmd(const char *text);
 command* create_quit_cmd();
 void free_command(command *cmd);
+
+static inline uint32_t timestamp() {
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (uint32_t)(ts.tv_sec * 1000 + ts.tv_nsec / 1000000);
+}
+
+void schedule_action(waymo_event_loop *loop, struct pending_action *action);
 
 #endif
