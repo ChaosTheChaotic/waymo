@@ -104,13 +104,21 @@ loop_exit:
 }
 
 waymo_event_loop *create_event_loop(const struct eloop_params *params) {
+  const struct eloop_params *checked_params;
+  if (!params) {
+    checked_params = &(struct eloop_params){
+      .kbd_layout = "us", .max_commands = 50,
+    };
+  } else {
+    checked_params = params;
+  }
   waymo_event_loop *loop = malloc(sizeof(waymo_event_loop));
   if (!loop)
     return NULL;
 
   loop->kbd_layout =
-      params->kbd_layout ? strdup(params->kbd_layout) : strdup("us");
-  loop->queue = create_queue(params->max_commands);
+      checked_params->kbd_layout ? strdup(checked_params->kbd_layout) : strdup("us");
+  loop->queue = create_queue(checked_params->max_commands);
   if (!loop->queue || !loop->kbd_layout) {
     free(loop->kbd_layout);
     free(loop);
