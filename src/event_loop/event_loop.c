@@ -202,6 +202,10 @@ command *create_keyboard_type_cmd(const char *text) {
     return NULL;
 
   char *txt = strdup(text);
+  if (!txt) {
+    free(cmd);
+    return NULL;
+  }
 
   cmd->type = CMD_KEYBOARD_TYPE;
   cmd->param = (command_param){.kbd = {.txt = txt}};
@@ -442,7 +446,7 @@ loop_exit:
   return NULL;
 }
 
-waymo_event_loop *create_event_loop(struct eloop_params *params) {
+waymo_event_loop *create_event_loop(const struct eloop_params *params) {
   waymo_event_loop *loop = malloc(sizeof(waymo_event_loop));
   if (!loop)
     return NULL;

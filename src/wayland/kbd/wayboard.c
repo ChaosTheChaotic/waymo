@@ -124,6 +124,10 @@ void ekbd_type(waymo_event_loop *loop, waymoctx *ctx, command_param *param) {
   act->expiry_ms = timestamp(); // Start immediately
   // Command might be freed after execute_command so dupe string
   act->data.type_txt.txt = strdup(param->kbd.txt);
+  if (!act->data.type_txt.txt) {
+    free(act);
+    return;
+  }
   act->data.type_txt.index = 0;
   act->next = NULL;
 

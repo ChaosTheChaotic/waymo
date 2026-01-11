@@ -111,7 +111,7 @@ typedef struct {
   struct pending_action *pending_head;
 } waymo_event_loop;
 
-waymo_event_loop *create_event_loop(struct eloop_params *params);
+waymo_event_loop *create_event_loop(const struct eloop_params *params);
 void destroy_event_loop(waymo_event_loop *loop);
 void send_command(waymo_event_loop *loop, command *cmd);
 
