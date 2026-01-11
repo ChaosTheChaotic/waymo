@@ -1,7 +1,7 @@
 #include "events/queue.h"
+#include <pthread.h>
 #include <stdlib.h>
 #include <sys/eventfd.h>
-#include <pthread.h>
 #include <unistd.h>
 
 command_queue *create_queue(unsigned int max_commands) {

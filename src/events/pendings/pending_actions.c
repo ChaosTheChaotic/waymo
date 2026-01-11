@@ -1,8 +1,8 @@
 #include "events/pendings.h"
 #include "utils.h"
+#include <pthread.h>
 #include <stdlib.h>
 #include <sys/timerfd.h>
-#include <pthread.h>
 
 void update_timer(waymo_event_loop *loop) {
   if (!loop->pending_head)

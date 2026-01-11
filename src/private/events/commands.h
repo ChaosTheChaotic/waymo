@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include "waymo/cmds.h"
 
 struct waymoctx;
 struct waymo_event_loop;
@@ -58,22 +59,6 @@ typedef struct command {
   command_type type;
   command_param param;
 } command;
-
-command* create_mouse_move_cmd(int x, int y, bool relative);
-command* create_mouse_click_cmd(int button, int clicks, uint32_t click_ms);
-command* create_mouse_button_cmd(int button, bool down);
-
-command* create_keyboard_key_cmd_b(char key, bool down);
-command* create_keyboard_key_cmd_uintt(char key, uint32_t hold_ms);
-
-#define create_keyboard_key_cmd(A, B)                                          \
-  _Generic((B),                                                                \
-      bool: create_keyboard_key_cmd_b,                                         \
-      uint32_t: create_keyboard_key_cmd_uintt, )(A)
-
-command* create_keyboard_type_cmd(const char *text);
-command* create_quit_cmd();
-void free_command(command *cmd);
 
 void execute_command(struct waymo_event_loop *loop, struct waymoctx *ctx, command *cmd);
 

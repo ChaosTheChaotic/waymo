@@ -112,7 +112,6 @@ void send_command(waymo_event_loop *loop, command *cmd) {
   }
 }
 
-
 void execute_command(waymo_event_loop *loop, waymoctx *ctx, command *cmd) {
   if (!ctx || !cmd)
     return;

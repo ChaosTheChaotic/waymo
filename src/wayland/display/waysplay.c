@@ -22,9 +22,21 @@ static void handle_output_scale(void *data, struct wl_output *wl_output,
   wctx->scale_factor = factor;
 }
 
+// Make the library happy
+static void handle_output_geometry(void *data, struct wl_output *wl_output,
+                                   int32_t x, int32_t y, int32_t physical_width,
+                                   int32_t physical_height, int32_t subpixel,
+                                   const char *make, const char *model,
+                                   int32_t transform) {}
+
+// Make the library happy
+static void handle_output_done(void *data, struct wl_output *wl_output) {}
+
 static const struct wl_output_listener output_listener = {
     .mode = handle_output_mode,
     .scale = handle_output_scale,
+    .geometry = handle_output_geometry,
+    .done = handle_output_done,
 };
 
 // The following was taken from wtype and modified for the uess of this library

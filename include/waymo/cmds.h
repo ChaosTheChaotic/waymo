@@ -13,10 +13,11 @@ command* create_mouse_button_cmd(int button, bool down);
 command* create_keyboard_key_cmd_b(char key, bool down);
 command* create_keyboard_key_cmd_uintt(char key, uint32_t hold_ms);
 
-#define create_keyboard_key_cmd(A, B)                                          \
-  _Generic((B),                                                                \
+#define create_keyboard_key_cmd(key, mutation)                                          \
+  _Generic((mutation),                                                                \
       bool: create_keyboard_key_cmd_b,                                         \
-      uint32_t: create_keyboard_key_cmd_uintt, )(A)
+      uint32_t: create_keyboard_key_cmd_uintt                                  \
+  )((char)(key), (mutation))
 
 command* create_keyboard_type_cmd(const char *text);
 command* create_quit_cmd();

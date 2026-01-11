@@ -2,14 +2,14 @@
 #include "wayland/waycon.h"
 #include "waymo/events.h"
 #include <errno.h>
+#include <pthread.h>
 #include <stdatomic.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/epoll.h>
 #include <sys/eventfd.h>
 #include <sys/timerfd.h>
 #include <unistd.h>
-#include <pthread.h>
-#include <string.h>
 
 void *event_loop(void *arg) {
   waymo_event_loop *loop = (waymo_event_loop *)arg;
@@ -108,7 +108,8 @@ waymo_event_loop *create_event_loop(const struct eloop_params *params) {
   if (!loop)
     return NULL;
 
-  loop->kbd_layout = params->kbd_layout ? strdup(params->kbd_layout) : strdup("us");
+  loop->kbd_layout =
+      params->kbd_layout ? strdup(params->kbd_layout) : strdup("us");
   loop->queue = create_queue(params->max_commands);
   if (!loop->queue || !loop->kbd_layout) {
     free(loop->kbd_layout);
