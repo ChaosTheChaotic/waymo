@@ -101,6 +101,7 @@ void ekbd_key(waymo_event_loop *loop, waymoctx *ctx, command_param *param) {
 
     // Schedule Release
     struct pending_action *act = malloc(sizeof(struct pending_action));
+    if (!act) return;
     act->expiry_ms = timestamp() + param->keyboard_key.keyboard_key_mod.hold_ms;
     act->type = ACTION_KEY_RELEASE;
     act->data.key.keycode = key.keycode;
@@ -115,12 +116,13 @@ void ekbd_type(waymo_event_loop *loop, waymoctx *ctx, command_param *param) {
     return;
 
   struct pending_action *act = malloc(sizeof(struct pending_action));
-  if (!act) return;
+  if (!act)
+    return;
 
   act->type = ACTION_TYPE_STEP;
   act->expiry_ms = timestamp(); // Start immediately
   // Command might be freed after execute_command so dupe string
-  act->data.type_txt.txt = strdup(param->kbd.txt); 
+  act->data.type_txt.txt = strdup(param->kbd.txt);
   act->data.type_txt.index = 0;
   act->next = NULL;
 
