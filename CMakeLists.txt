@@ -6,6 +6,9 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
     message(FATAL_ERROR "Building on Windows is not supported.")
 endif()
 
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD_REQUIRED ON)
+
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(WAYLAND_CLIENT REQUIRED wayland-client)
 pkg_check_modules(XKBCOMMON REQUIRED xkbcommon)
