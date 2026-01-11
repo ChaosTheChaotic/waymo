@@ -101,7 +101,8 @@ void ekbd_key(waymo_event_loop *loop, waymoctx *ctx, command_param *param) {
 
     // Schedule Release
     struct pending_action *act = malloc(sizeof(struct pending_action));
-    if (!act) return;
+    if (!act)
+      return;
     act->expiry_ms = timestamp() + param->keyboard_key.keyboard_key_mod.hold_ms;
     act->type = ACTION_KEY_RELEASE;
     act->data.key.keycode = key.keycode;

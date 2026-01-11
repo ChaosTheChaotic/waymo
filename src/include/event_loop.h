@@ -5,6 +5,7 @@
 #include <semaphore.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdatomic.h>
 
 #define likely(x) __builtin_expect(!!(x), 1)
 #define unlikely(x) __builtin_expect(!!(x), 0)
@@ -84,7 +85,7 @@ typedef struct {
   unsigned int max_capacity;
   pthread_mutex_t mutex;
   int fd;
-  bool shutdown;
+  atomic_bool shutdown;
 } command_queue;
 
 struct eloop_params {

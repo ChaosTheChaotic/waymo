@@ -1,16 +1,13 @@
 #include "event_loop.h"
+#include "pthread.h"
 #include "waycon.h"
-#include <bits/time.h>
 #include <errno.h>
-#include <pthread.h>
-#include <semaphore.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/epoll.h>
 #include <sys/eventfd.h>
 #include <sys/timerfd.h>
 #include <unistd.h>
-#include <wayland-client-core.h>
 
 void update_timer(waymo_event_loop *loop) {
   if (!loop->pending_head)
@@ -56,6 +53,7 @@ void clear_pending_actions(waymo_event_loop *loop) {
 void handle_timer_expiry(waymo_event_loop *loop, waymoctx *ctx) {
   pthread_mutex_lock(&loop->pending_mutex);
   uint64_t now = timestamp();
+
   while (loop->pending_head && loop->pending_head->expiry_ms <= now) {
     struct pending_action *act = loop->pending_head;
     loop->pending_head = act->next;
@@ -72,7 +70,6 @@ void handle_timer_expiry(waymo_event_loop *loop, waymoctx *ctx) {
                                      WL_POINTER_BUTTON_STATE_RELEASED);
       zwlr_virtual_pointer_v1_frame(ctx->ptr);
     } else if (act->type == ACTION_CLICK_STEP) {
-      // Toggle state and reschedule if clicks remain
       uint32_t state = act->data.click.is_down
                            ? WL_POINTER_BUTTON_STATE_RELEASED
                            : WL_POINTER_BUTTON_STATE_PRESSED;
@@ -83,13 +80,14 @@ void handle_timer_expiry(waymo_event_loop *loop, waymoctx *ctx) {
       if (act->data.click.is_down || act->data.click.remaining > 1) {
         struct pending_action *next_step =
             malloc(sizeof(struct pending_action));
-	if (!next_step) continue;
-        *next_step = *act;
-        next_step->expiry_ms = now + act->data.click.ms;
-        next_step->data.click.is_down = !act->data.click.is_down;
-        if (!next_step->data.click.is_down)
-          next_step->data.click.remaining--;
-        schedule_action(loop, next_step);
+        if (next_step) {
+          *next_step = *act;
+          next_step->expiry_ms = now + act->data.click.ms;
+          next_step->data.click.is_down = !act->data.click.is_down;
+          if (!next_step->data.click.is_down)
+            next_step->data.click.remaining--;
+          schedule_action(loop, next_step);
+        }
       }
     } else if (act->type == ACTION_TYPE_STEP) {
       char c = act->data.type_txt.txt[act->data.type_txt.index];
@@ -99,37 +97,30 @@ void handle_timer_expiry(waymo_event_loop *loop, waymoctx *ctx) {
           if (key.shift)
             zwp_virtual_keyboard_v1_key(ctx->kbd, timestamp(), KEY_LEFTSHIFT,
                                         WL_KEYBOARD_KEY_STATE_PRESSED);
-
           zwp_virtual_keyboard_v1_key(ctx->kbd, timestamp(), key.keycode,
                                       WL_KEYBOARD_KEY_STATE_PRESSED);
           zwp_virtual_keyboard_v1_key(ctx->kbd, timestamp(), key.keycode,
                                       WL_KEYBOARD_KEY_STATE_RELEASED);
-
           if (key.shift)
             zwp_virtual_keyboard_v1_key(ctx->kbd, timestamp(), KEY_LEFTSHIFT,
                                         WL_KEYBOARD_KEY_STATE_RELEASED);
         }
 
-        // Schedule next character
         if (act->data.type_txt.txt[act->data.type_txt.index + 1] != '\0') {
-	  struct pending_action *next_char = malloc(sizeof(struct pending_action));
-	  if (next_char) {
-	      memcpy(next_char, act, sizeof(struct pending_action));
-	      next_char->data.type_txt.txt = strdup(act->data.type_txt.txt);
-	      if (!next_char->data.type_txt.txt) {
-	          free(next_char);
-	          continue;
-	      }
-	      next_char->data.type_txt.index = act->data.type_txt.index + 1;
-	      next_char->next = NULL;
-	      schedule_action(loop, next_char);
-	  }
-        } else {
-          free(act->data.type_txt.txt);
-          act->data.type_txt.txt = NULL;
+          struct pending_action *next_char =
+              malloc(sizeof(struct pending_action));
+          if (next_char) {
+            *next_char = *act;
+            next_char->data.type_txt.index++;
+            schedule_action(loop, next_char);
+
+            act->data.type_txt.txt = NULL;
+          }
         }
       }
-      free(act);
+      if (act->data.type_txt.txt) {
+        free(act->data.type_txt.txt);
+      }
     }
 
     wl_display_flush(ctx->display);
@@ -255,7 +246,7 @@ void destroy_queue(command_queue *q) {
     return;
 
   pthread_mutex_lock(&q->mutex);
-  q->shutdown = true;
+  atomic_store(&q->shutdown, true);
 
   while (q->num_commands > 0) {
     command *cmd = q->commands[q->front];
@@ -281,23 +272,27 @@ void destroy_queue(command_queue *q) {
 
 bool add_queue(command_queue *q, command *cmd) {
   pthread_mutex_lock(&q->mutex);
-  if (q->num_commands >= q->max_capacity || q->shutdown)
-    goto fail_return;
+  if (q->num_commands >= q->max_capacity || atomic_load(&q->shutdown)) {
+    pthread_mutex_unlock(&q->mutex);
+    return false;
+  }
+
   q->commands[q->back] = cmd;
-  q->back = (q->back + 1) % q->max_capacity;
-  q->num_commands++;
+  unsigned int new_back = (q->back + 1) % q->max_capacity;
 
-  // Signal the epoll loop that a command is ready
+  // Signal the epoll loop
   uint64_t u = 1;
-  if (write(q->fd, &u, sizeof(uint64_t)) == -1)
-    goto fail_return;
+  if (write(q->fd, &u, sizeof(uint64_t)) == -1) {
+    // Rollback on write failure
+    q->commands[q->back] = NULL;
+    pthread_mutex_unlock(&q->mutex);
+    return false;
+  }
 
+  q->back = new_back;
+  q->num_commands++;
   pthread_mutex_unlock(&q->mutex);
   return true;
-
-fail_return:
-  pthread_mutex_unlock(&q->mutex);
-  return false;
 }
 
 command *remove_queue(command_queue *q) {
@@ -348,8 +343,11 @@ void execute_command(waymo_event_loop *loop, waymoctx *ctx, command *cmd) {
     break;
   }
 
-  while (wl_display_flush(ctx->display) > 0)
+  int ret;
+  while ((ret = wl_display_flush(ctx->display)) > 0)
     ;
+  if (ret < 0)
+    return;
 }
 
 void *event_loop(void *arg) {
@@ -371,9 +369,12 @@ void *event_loop(void *arg) {
   struct epoll_event ev_cmd = {.events = EPOLLIN, .data.fd = loop->queue->fd};
   struct epoll_event ev_timer = {.events = EPOLLIN, .data.fd = loop->timer_fd};
 
-  if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, wayland_fd, &ev_wayland) == -1) goto loop_exit;
-  if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, loop->queue->fd, &ev_cmd) == -1) goto loop_exit;
-  if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, loop->timer_fd, &ev_timer) == -1) goto loop_exit;
+  if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, wayland_fd, &ev_wayland) == -1)
+    goto loop_exit;
+  if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, loop->queue->fd, &ev_cmd) == -1)
+    goto loop_exit;
+  if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, loop->timer_fd, &ev_timer) == -1)
+    goto loop_exit;
 
 #define EVENTS_NUM 3
 
@@ -432,11 +433,11 @@ void *event_loop(void *arg) {
   }
 
 loop_exit:
-  clear_pending_actions(loop);
-  close(epoll_fd);
-  if (loop->timer_fd >= 0) {
+  if (epoll_fd >= 0)
+    close(epoll_fd);
+  if (loop->timer_fd >= 0)
     close(loop->timer_fd);
-  }
+  clear_pending_actions(loop);
   destroy_waymoctx(ctx);
   return NULL;
 }
@@ -460,6 +461,7 @@ waymo_event_loop *create_event_loop(struct eloop_params *params) {
   if (pthread_mutex_init(&loop->pending_mutex, NULL) != 0) {
     destroy_queue(loop->queue);
     free(loop->layout);
+    sem_destroy(&loop->ready_sem);
     free(loop);
     return NULL;
   }
@@ -496,10 +498,12 @@ void destroy_event_loop(waymo_event_loop *loop) {
   // Signal shutdown to the background thread
   command *qcmd = create_quit_cmd();
   if (qcmd) {
-    add_queue(loop->queue, qcmd);
-    // Wait for the thread to finish processing
-    pthread_join(loop->thread, NULL);
+    if (!add_queue(loop->queue, qcmd)) {
+      free_command(qcmd);
+    }
   }
+  // Wait for the thread to finish processing
+  pthread_join(loop->thread, NULL);
 
   pthread_mutex_destroy(&loop->pending_mutex);
 

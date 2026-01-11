@@ -70,7 +70,8 @@ void emouse_click(waymo_event_loop *loop, waymoctx *ctx, command_param *param) {
 
   // Schedule the release and other clicks
   struct pending_action *act = malloc(sizeof(struct pending_action));
-  if (!act) return;
+  if (!act)
+    return;
   act->expiry_ms = timestamp() + param->mouse_click.click_ms;
   act->type = ACTION_CLICK_STEP;
   act->data.click.button = button;
