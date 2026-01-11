@@ -1,7 +1,7 @@
 #include "event_loop.h"
-#include "pthread.h"
 #include "waycon.h"
 #include <errno.h>
+#include <stdatomic.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/epoll.h>
@@ -457,6 +457,7 @@ waymo_event_loop *create_event_loop(struct eloop_params *params) {
 
   loop->timer_fd = -1;
   loop->pending_head = NULL;
+  atomic_init(&loop->status, STATUS_OK);
 
   if (pthread_mutex_init(&loop->pending_mutex, NULL) != 0) {
     destroy_queue(loop->queue);
@@ -497,23 +498,19 @@ void destroy_event_loop(waymo_event_loop *loop) {
 
   // Signal shutdown to the background thread
   command *qcmd = create_quit_cmd();
-  if (qcmd) {
-    if (!add_queue(loop->queue, qcmd)) {
-      free_command(qcmd);
-    }
+  if (qcmd && !add_queue(loop->queue, qcmd)) {
+    free_command(qcmd);
   }
   // Wait for the thread to finish processing
   pthread_join(loop->thread, NULL);
 
-  pthread_mutex_destroy(&loop->pending_mutex);
-
-  if (loop->queue != NULL) {
+  if (loop->queue != NULL)
     destroy_queue(loop->queue);
-  }
 
-  if (loop->timer_fd >= 0) {
+  if (loop->timer_fd >= 0)
     close(loop->timer_fd);
-  }
+
+  pthread_mutex_destroy(&loop->pending_mutex);
 
   free(loop->layout);
   free(loop);

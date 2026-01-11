@@ -58,7 +58,15 @@ struct Key {
 };
 
 static inline struct Key chartokey(char c) {
+
+    // Bounds check to prevent out-of-bounds access with extended ASCII
+    if ((unsigned char)c >= 128) {
+        return (struct Key){0, false};
+    }
+
     // We want one table at compile time
+    // This is used instead of a reverse xkbcommon lookup as it is much faster
+    // xkbcommon lookup would be O(n^2) for things like typing which is not ideal.
     static const struct Key map[128] = {
         // Lowercase
         ['a'] = {KEY_A, false}, ['b'] = {KEY_B, false}, ['c'] = {KEY_C, false},
@@ -109,11 +117,6 @@ static inline struct Key chartokey(char c) {
         ['=']  = {KEY_EQUAL, false},     ['+']  = {KEY_EQUAL, true},
         ['`']  = {KEY_GRAVE, false},     ['~']  = {KEY_GRAVE, true},
     };
-
-    // Bounds check to prevent out-of-bounds access with extended ASCII
-    if ((unsigned char)c >= 128) {
-        return (struct Key){0, false};
-    }
 
     return map[(unsigned char)c];
 }
