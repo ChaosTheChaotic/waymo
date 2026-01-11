@@ -3,7 +3,8 @@
 
 #include <stdbool.h>
 #include <stdint.h>
-#include "waymo/cmds.h"
+#include "waymo/actions_internal.h"
+#include "waymo/btns.h"
 
 struct waymoctx;
 struct waymo_event_loop;
@@ -16,12 +17,6 @@ typedef enum {
   CMD_KEYBOARD_KEY,  // Takes key and if down
   CMD_QUIT,
 } command_type;
-
-typedef enum {
-  MBTN_LEFT,
-  MBTN_RIGHT,
-  MBTN_MID,
-}MBTNS;
 
 enum KMODOPT {
   DOWN,
@@ -52,6 +47,7 @@ typedef union {
   } keyboard_key;
   struct {
     char *txt;
+    int done_fd;
   } kbd;
 } command_param;
 
@@ -61,5 +57,9 @@ typedef struct command {
 } command;
 
 void execute_command(struct waymo_event_loop *loop, struct waymoctx *ctx, command *cmd);
+
+void free_command(command *cmd);
+
+command* create_quit_cmd();
 
 #endif

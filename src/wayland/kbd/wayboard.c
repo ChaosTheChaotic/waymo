@@ -131,6 +131,7 @@ void ekbd_type(waymo_event_loop *loop, waymoctx *ctx, command_param *param) {
     return;
   }
   act->data.type_txt.index = 0;
+  act->data.type_txt.done_fd = param->kbd.done_fd;
   act->next = NULL;
 
   schedule_action(loop, act);

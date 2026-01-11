@@ -16,7 +16,7 @@ struct pending_action {
         struct { uint32_t keycode; bool shift; } key;
         struct { uint32_t button; } mouse;
         struct { uint32_t button; uint32_t ms; unsigned int remaining; bool is_down; } click;
-	struct { char *txt; unsigned int index; } type_txt;
+	struct { char *txt; unsigned int index; int done_fd; } type_txt;
 	    } data;
     struct pending_action *next;
 };

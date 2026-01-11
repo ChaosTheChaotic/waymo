@@ -13,7 +13,7 @@ command *create_quit_cmd() {
   return cmd;
 }
 
-command *create_mouse_move_cmd(int x, int y, bool relative) {
+command *_create_mouse_move_cmd(int x, int y, bool relative) {
   command *cmd = malloc(sizeof(command));
   if (!cmd)
     return NULL;
@@ -23,7 +23,8 @@ command *create_mouse_move_cmd(int x, int y, bool relative) {
   return cmd;
 }
 
-command *create_mouse_click_cmd(int button, int clicks, uint32_t click_ms) {
+command *_create_mouse_click_cmd(MBTNS button, unsigned int clicks,
+                                 uint32_t click_ms) {
   command *cmd = malloc(sizeof(command));
   if (!cmd)
     return NULL;
@@ -35,7 +36,7 @@ command *create_mouse_click_cmd(int button, int clicks, uint32_t click_ms) {
   return cmd;
 }
 
-command *create_mouse_button_cmd(int button, bool down) {
+command *_create_mouse_button_cmd(MBTNS button, bool down) {
   command *cmd = malloc(sizeof(command));
   if (!cmd)
     return NULL;
@@ -45,7 +46,7 @@ command *create_mouse_button_cmd(int button, bool down) {
   return cmd;
 }
 
-command *create_keyboard_key_cmd_b(char key, bool down) {
+command *_create_keyboard_key_cmd_b(char key, bool down) {
   command *cmd = malloc(sizeof(command));
   if (!cmd)
     return NULL;
@@ -57,7 +58,7 @@ command *create_keyboard_key_cmd_b(char key, bool down) {
   return cmd;
 }
 
-command *create_keyboard_key_cmd_uintt(char key, uint32_t hold_ms) {
+command *_create_keyboard_key_cmd_uintt(char key, uint32_t hold_ms) {
   command *cmd = malloc(sizeof(command));
   if (!cmd)
     return NULL;
@@ -70,7 +71,7 @@ command *create_keyboard_key_cmd_uintt(char key, uint32_t hold_ms) {
   return cmd;
 }
 
-command *create_keyboard_type_cmd(const char *text) {
+command *_create_keyboard_type_cmd(const char *text, int done_fd) {
   command *cmd = malloc(sizeof(command));
   if (!cmd)
     return NULL;
@@ -82,7 +83,7 @@ command *create_keyboard_type_cmd(const char *text) {
   }
 
   cmd->type = CMD_KEYBOARD_TYPE;
-  cmd->param = (command_param){.kbd = {.txt = txt}};
+  cmd->param = (command_param){.kbd = {.txt = txt, .done_fd = done_fd}};
   return cmd;
 }
 
@@ -102,7 +103,7 @@ void free_command(command *cmd) {
   cmd = NULL;
 }
 
-void send_command(waymo_event_loop *loop, command *cmd) {
+void _send_command(waymo_event_loop *loop, command *cmd) {
   if (unlikely(!loop || !cmd))
     return;
 

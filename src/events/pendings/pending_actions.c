@@ -1,8 +1,11 @@
 #include "events/pendings.h"
 #include "utils.h"
+#include <errno.h>
 #include <pthread.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <sys/timerfd.h>
+#include <unistd.h>
 
 void update_timer(waymo_event_loop *loop) {
   if (!loop->pending_head)
@@ -116,6 +119,16 @@ void handle_timer_expiry(waymo_event_loop *loop, waymoctx *ctx) {
             schedule_action_locked(loop, next_char);
 
             act->data.type_txt.txt = NULL;
+          }
+        } else {
+          if (act->data.type_txt.done_fd >= 0) {
+            uint64_t sig = 1;
+            while (write(act->data.type_txt.done_fd, &sig, sizeof(sig)) < 0) {
+              if (errno == EINTR)
+                continue; // Interrupted by signal, try again
+              perror("Critical error signaling done_fd");
+              break;
+            }
           }
         }
       }
