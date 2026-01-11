@@ -3,10 +3,16 @@ cmake_minimum_required(VERSION 3.25)
 project("waymo" LANGUAGES C)
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
-    message(FATAL_ERROR "Building on Windows is not supported.")
+  message(FATAL_ERROR "Building on Windows is not supported.")
 endif()
 
-set(CMAKE_C_STANDARD 11)
+if(CMAKE_C_STANDARD_LATEST GREATER_EQUAL 17)
+  set(CMAKE_C_STANDARD 17)
+elseif(CMAKE_C_STANDARD_LATEST GREATER_EQUAL 11)
+  set(CMAKE_C_STANDARD 11)
+else()
+  message(FATAL_ERROR "Compiler does not support C17 or C11 (for atomics). Build aborted.")
+endif()
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
 find_package(PkgConfig REQUIRED)
@@ -84,38 +90,38 @@ file(MAKE_DIRECTORY "${GEN_PROTO_DIR}")
 file(MAKE_DIRECTORY "${GEN_PROTO_DIR_H}")
 
 if(GENERATE_PROTOCOLS)
-    find_program(WAYLAND_SCANNER NAMES wayland-scanner REQUIRED)
-    
-    set(PROTO_FILES_TO_GENERATE)
-    foreach(PROTO_FILE IN ITEMS "${PROTO_K_C}" "${PROTO_K_H}" "${PROTO_P_C}" "${PROTO_P_H}")
-        if(NOT EXISTS "${PROTO_FILE}")
-            list(APPEND PROTO_FILES_TO_GENERATE "${PROTO_FILE}")
-        endif()
-    endforeach()
-    
-    if(PROTO_FILES_TO_GENERATE)
-        add_custom_command(
-            OUTPUT "${PROTO_K_C}" "${PROTO_K_H}"
-            COMMAND ${WAYLAND_SCANNER} private-code "${PROTO_K_X}" "${PROTO_K_C}"
-            COMMAND ${WAYLAND_SCANNER} client-header "${PROTO_K_X}" "${PROTO_K_H}"
-            DEPENDS "${PROTO_K_X}"
-            COMMENT "Generating keyboard protocol files"
-            VERBATIM
-        )
-        
-        add_custom_command(
-            OUTPUT "${PROTO_P_C}" "${PROTO_P_H}"
-            COMMAND ${WAYLAND_SCANNER} private-code "${PROTO_P_X}" "${PROTO_P_C}"
-            COMMAND ${WAYLAND_SCANNER} client-header "${PROTO_P_X}" "${PROTO_P_H}"
-            DEPENDS "${PROTO_P_X}"
-            COMMENT "Generating pointer protocol files"
-            VERBATIM
-        )
-    else()
-        message(STATUS "Protocol files already exist. Skipping generation")
+  find_program(WAYLAND_SCANNER NAMES wayland-scanner REQUIRED)
+
+  set(PROTO_FILES_TO_GENERATE)
+  foreach(PROTO_FILE IN ITEMS "${PROTO_K_C}" "${PROTO_K_H}" "${PROTO_P_C}" "${PROTO_P_H}")
+    if(NOT EXISTS "${PROTO_FILE}")
+      list(APPEND PROTO_FILES_TO_GENERATE "${PROTO_FILE}")
     endif()
+  endforeach()
+
+  if(PROTO_FILES_TO_GENERATE)
+    add_custom_command(
+      OUTPUT "${PROTO_K_C}" "${PROTO_K_H}"
+      COMMAND ${WAYLAND_SCANNER} private-code "${PROTO_K_X}" "${PROTO_K_C}"
+      COMMAND ${WAYLAND_SCANNER} client-header "${PROTO_K_X}" "${PROTO_K_H}"
+      DEPENDS "${PROTO_K_X}"
+      COMMENT "Generating keyboard protocol files"
+      VERBATIM
+    )
+
+    add_custom_command(
+      OUTPUT "${PROTO_P_C}" "${PROTO_P_H}"
+      COMMAND ${WAYLAND_SCANNER} private-code "${PROTO_P_X}" "${PROTO_P_C}"
+      COMMAND ${WAYLAND_SCANNER} client-header "${PROTO_P_X}" "${PROTO_P_H}"
+      DEPENDS "${PROTO_P_X}"
+      COMMENT "Generating pointer protocol files"
+      VERBATIM
+    )
+  else()
+    message(STATUS "Protocol files already exist. Skipping generation")
+  endif()
 else()
-    message(STATUS "Protocol generation disabled. Using existing files")
+  message(STATUS "Protocol generation disabled. Using existing files")
 endif()
 
 add_library(waymo_deps INTERFACE)
