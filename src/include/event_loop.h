@@ -106,6 +106,7 @@ typedef struct {
   _Atomic loop_status status;
   sem_t ready_sem;
   int timer_fd;
+  pthread_mutex_t pending_mutex;
   struct pending_action *pending_head;
 } waymo_event_loop;
 
@@ -129,10 +130,10 @@ command* create_keyboard_type_cmd(const char *text);
 command* create_quit_cmd();
 void free_command(command *cmd);
 
-static inline uint32_t timestamp() {
+static inline uint64_t timestamp() {
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
-    return (uint32_t)(ts.tv_sec * 1000 + ts.tv_nsec / 1000000);
+    return (uint64_t)(ts.tv_sec * 1000 + ts.tv_nsec / 1000000);
 }
 
 void schedule_action(waymo_event_loop *loop, struct pending_action *action);

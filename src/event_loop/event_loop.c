@@ -27,26 +27,34 @@ void update_timer(waymo_event_loop *loop) {
 }
 
 void schedule_action(waymo_event_loop *loop, struct pending_action *action) {
-  struct pending_action **curr = &loop->pending_head;
-  while (*curr && (*curr)->expiry_ms < action->expiry_ms) {
-    curr = &((*curr)->next);
-  }
-  action->next = *curr;
-  *curr = action;
-  update_timer(loop);
+    pthread_mutex_lock(&loop->pending_mutex);
+    struct pending_action **curr = &loop->pending_head;
+    while (*curr && (*curr)->expiry_ms < action->expiry_ms) {
+        curr = &((*curr)->next);
+    }
+    action->next = *curr;
+    *curr = action;
+    update_timer(loop);
+    pthread_mutex_unlock(&loop->pending_mutex);
 }
 
 void clear_pending_actions(waymo_event_loop *loop) {
-  struct pending_action *curr = loop->pending_head;
-  while (curr) {
-    struct pending_action *next = curr->next;
-    free(curr);
-    curr = next;
-  }
-  loop->pending_head = NULL;
+    pthread_mutex_lock(&loop->pending_mutex);
+    struct pending_action *curr = loop->pending_head;
+    while (curr) {
+        struct pending_action *next = curr->next;
+        if (curr->type == ACTION_TYPE_STEP) {
+            free(curr->data.type_txt.txt);
+        }
+        free(curr);
+        curr = next;
+    }
+    loop->pending_head = NULL;
+    pthread_mutex_unlock(&loop->pending_mutex);
 }
 
 void handle_timer_expiry(waymo_event_loop *loop, waymoctx *ctx) {
+  pthread_mutex_lock(&loop->pending_mutex);
   uint64_t now = timestamp();
   while (loop->pending_head && loop->pending_head->expiry_ms <= now) {
     struct pending_action *act = loop->pending_head;
@@ -101,9 +109,7 @@ void handle_timer_expiry(waymo_event_loop *loop, waymoctx *ctx) {
         // Schedule next character
         if (act->data.type_txt.txt[act->data.type_txt.index + 1] != '\0') {
             struct pending_action *next_char = malloc(sizeof(struct pending_action));
-            next_char->type = ACTION_TYPE_STEP;
-            next_char->expiry_ms = now + 20; // 20ms delay between keys (default for now)
-            next_char->data.type_txt.txt = act->data.type_txt.txt;
+            memcpy(next_char, act, sizeof(struct pending_action));
             next_char->data.type_txt.index = act->data.type_txt.index + 1;
             next_char->next = NULL;
             schedule_action(loop, next_char);
@@ -118,6 +124,7 @@ void handle_timer_expiry(waymo_event_loop *loop, waymoctx *ctx) {
     free(act);
   }
   update_timer(loop);
+  pthread_mutex_unlock(&loop->pending_mutex);
 }
 
 command *create_quit_cmd() {
@@ -237,7 +244,14 @@ void destroy_queue(command_queue *q) {
 
   pthread_mutex_lock(&q->mutex);
   q->shutdown = true;
+  pthread_mutex_unlock(&q->mutex);
 
+  if (q->fd >= 0) {
+    close(q->fd);
+    q->fd = -1;
+  }
+
+  pthread_mutex_lock(&q->mutex);
   while (q->num_commands > 0) {
     command *cmd = q->commands[q->front];
     if (cmd) {
@@ -246,11 +260,7 @@ void destroy_queue(command_queue *q) {
     q->front = (q->front + 1) % q->max_capacity;
     q->num_commands--;
   }
-
   pthread_mutex_unlock(&q->mutex);
-
-  if (q->fd >= 0)
-    close(q->fd);
 
   pthread_mutex_destroy(&q->mutex);
 
@@ -262,20 +272,21 @@ void destroy_queue(command_queue *q) {
 
 bool add_queue(command_queue *q, command *cmd) {
   pthread_mutex_lock(&q->mutex);
-  if (q->num_commands >= q->max_capacity || q->shutdown) {
-    pthread_mutex_unlock(&q->mutex);
-    return false;
-  }
+  if (q->num_commands >= q->max_capacity || q->shutdown) goto fail_return;
   q->commands[q->back] = cmd;
   q->back = (q->back + 1) % q->max_capacity;
   q->num_commands++;
 
   // Signal the epoll loop that a command is ready
   uint64_t u = 1;
-  write(q->fd, &u, sizeof(uint64_t));
+  if (write(q->fd, &u, sizeof(uint64_t)) == -1) goto fail_return;
 
   pthread_mutex_unlock(&q->mutex);
   return true;
+
+fail_return:
+  pthread_mutex_unlock(&q->mutex);
+  return false;
 }
 
 command *remove_queue(command_queue *q) {
@@ -380,7 +391,7 @@ void *event_loop(void *arg) {
       } else if (events[i].data.fd == loop->queue->fd) {
         // Clear eventfd signal
         uint64_t u;
-        read(loop->queue->fd, &u, sizeof(uint64_t));
+        if (read(loop->queue->fd, &u, sizeof(uint64_t)) == -1) goto loop_exit;
 
         command *cmd;
         while ((cmd = remove_queue(loop->queue))) {
@@ -393,7 +404,9 @@ void *event_loop(void *arg) {
         }
       } else if (events[i].data.fd == loop->timer_fd) {
         uint64_t expirations;
-        read(loop->timer_fd, &expirations, sizeof(uint64_t));
+        if (read(loop->timer_fd, &expirations, sizeof(uint64_t)) == -1) {
+	  goto loop_exit;
+	}
         handle_timer_expiry(loop, ctx);
       }
     }
@@ -429,9 +442,20 @@ waymo_event_loop *create_event_loop(struct eloop_params *params) {
     return NULL;
   }
 
+  loop->timer_fd = -1;
+  loop->pending_head = NULL;
+
+  if (pthread_mutex_init(&loop->pending_mutex, NULL) != 0) {
+    destroy_queue(loop->queue);
+    free(loop->layout);
+    free(loop);
+    return NULL;
+  }
+
   sem_init(&loop->ready_sem, 0, 0);
 
   if (pthread_create(&loop->thread, NULL, event_loop, loop) != 0) {
+    pthread_mutex_destroy(&loop->pending_mutex);
     destroy_queue(loop->queue);
     free(loop->layout);
     sem_destroy(&loop->ready_sem);
@@ -464,6 +488,8 @@ void destroy_event_loop(waymo_event_loop *loop) {
     // Wait for the thread to finish processing
     pthread_join(loop->thread, NULL);
   }
+
+  pthread_mutex_destroy(&loop->pending_mutex);
 
   if (loop->queue != NULL) {
     destroy_queue(loop->queue);
