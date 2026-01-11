@@ -6,20 +6,18 @@
 waymoctx *init_waymoctx(char *layout, _Atomic loop_status *status) {
   waymoctx *ctx = calloc(1, sizeof(waymoctx));
   if (!ctx) {
-    *status |= STATUS_INIT_FAILED;
+    atomic_fetch_or(status, STATUS_INIT_FAILED);
     return NULL;
   }
   if (!waymoctx_connect(ctx, status)) {
     goto err_cleanup;
   }
-  if (!waymoctx_kbd(ctx, layout)) {
-    *status |= STATUS_KBD_FAILED;
-  }
-  if (!waymoctx_pointer(ctx)) {
-    *status |= STATUS_PTR_FAILED;
-  }
+  if (!waymoctx_kbd(ctx, layout))
+    atomic_fetch_or(status, STATUS_KBD_FAILED);
+  if (!waymoctx_pointer(ctx))
+    atomic_fetch_or(status, STATUS_PTR_FAILED);
   wl_display_roundtrip(ctx->display);
-  *status |= STATUS_OK;
+  atomic_fetch_or(status, STATUS_OK);
   return ctx;
 err_cleanup:
   free(ctx);
