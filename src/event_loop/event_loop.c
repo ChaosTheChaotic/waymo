@@ -43,7 +43,7 @@ void clear_pending_actions(waymo_event_loop *loop) {
   struct pending_action *curr = loop->pending_head;
   while (curr) {
     struct pending_action *next = curr->next;
-    if (curr->type == ACTION_TYPE_STEP) {
+    if (curr->type == ACTION_TYPE_STEP && curr->data.type_txt.txt) {
       free(curr->data.type_txt.txt);
     }
     free(curr);
@@ -112,14 +112,18 @@ void handle_timer_expiry(waymo_event_loop *loop, waymoctx *ctx) {
 
         // Schedule next character
         if (act->data.type_txt.txt[act->data.type_txt.index + 1] != '\0') {
-          struct pending_action *next_char =
-              malloc(sizeof(struct pending_action));
-          if (next_char) {
-            memcpy(next_char, act, sizeof(struct pending_action));
-            next_char->data.type_txt.index = act->data.type_txt.index + 1;
-            next_char->next = NULL;
-            schedule_action(loop, next_char);
-          }
+	  struct pending_action *next_char = malloc(sizeof(struct pending_action));
+	  if (next_char) {
+	      memcpy(next_char, act, sizeof(struct pending_action));
+	      next_char->data.type_txt.txt = strdup(act->data.type_txt.txt);
+	      if (!next_char->data.type_txt.txt) {
+	          free(next_char);
+	          continue;
+	      }
+	      next_char->data.type_txt.index = act->data.type_txt.index + 1;
+	      next_char->next = NULL;
+	      schedule_action(loop, next_char);
+	  }
         } else {
           free(act->data.type_txt.txt);
           act->data.type_txt.txt = NULL;
@@ -367,9 +371,9 @@ void *event_loop(void *arg) {
   struct epoll_event ev_cmd = {.events = EPOLLIN, .data.fd = loop->queue->fd};
   struct epoll_event ev_timer = {.events = EPOLLIN, .data.fd = loop->timer_fd};
 
-  epoll_ctl(epoll_fd, EPOLL_CTL_ADD, wayland_fd, &ev_wayland);
-  epoll_ctl(epoll_fd, EPOLL_CTL_ADD, loop->queue->fd, &ev_cmd);
-  epoll_ctl(epoll_fd, EPOLL_CTL_ADD, loop->timer_fd, &ev_timer);
+  if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, wayland_fd, &ev_wayland) == -1) goto loop_exit;
+  if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, loop->queue->fd, &ev_cmd) == -1) goto loop_exit;
+  if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, loop->timer_fd, &ev_timer) == -1) goto loop_exit;
 
 #define EVENTS_NUM 3
 
