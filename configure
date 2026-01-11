@@ -26,10 +26,12 @@ CMAKE_OPTIONS:
   Examples: -DUSE_CCACHE=OFF -DCMAKE_BUILD_TYPE=Debug
 
 CMake Options from CMakeLists.txt:
-  -DUSE_CCACHE=[ON|OFF]    Use ccache for faster builds (default: ON)
-  -DUSE_LTO=[ON|OFF]       Use linktime optimizations (default: ON)
-  -DBUILD_SHARED=[ON|OFF]  Build shared library (default: ON)
-  -DBUILD_STATIC=[ON|OFF]  Build static library (default: ON)
+  -DUSE_CCACHE=[ON|OFF]		Use ccache for faster builds (default: ON)
+  -DUSE_LTO=[ON|OFF]          	Use linktime optimizations (default: ON)
+  -DBUILD_SHARED=[ON|OFF]     	Build shared library (default: ON)
+  -DBUILD_STATIC=[ON|OFF]     	Build static library (default: ON)
+  -DGENERATE_PROTOCOLS=[ON|OFF] Generate the wayland protocols if needed (default: ON)
+  -DMARCH_NATIVE=[ON|OFF]	Build with optimizations for native arch (default: ON)
 
 Examples:
   $0                          # Default configuration
