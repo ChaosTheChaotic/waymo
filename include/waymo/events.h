@@ -2,6 +2,7 @@
 #define PEVENTS_H
 
 #include <pthread.h>
+#include "cmds.h"
 
 typedef struct eloop_params {
   unsigned int max_commands;
@@ -16,10 +17,10 @@ typedef enum {
 } loop_status;
 
 typedef struct waymo_event_loop waymo_event_loop;
-typedef struct command command;
 
 waymo_event_loop* create_event_loop(const eloop_params *params);
 void destroy_event_loop(waymo_event_loop *loop);
 void send_command(waymo_event_loop *loop, command *cmd);
+loop_status get_event_loop_status(waymo_event_loop *loop);
 
 #endif

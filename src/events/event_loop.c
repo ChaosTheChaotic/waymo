@@ -1,5 +1,6 @@
 #include "events/pendings.h"
 #include "wayland/waycon.h"
+#include "waymo/events.h"
 #include <errno.h>
 #include <stdatomic.h>
 #include <stdlib.h>
@@ -164,4 +165,8 @@ void destroy_event_loop(waymo_event_loop *loop) {
 
   free(loop->kbd_layout);
   free(loop);
+}
+
+loop_status get_event_loop_status(waymo_event_loop *loop) {
+  return loop->status;
 }
