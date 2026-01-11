@@ -1,6 +1,8 @@
 #define _GNU_SOURCE
 
-#include "waycon.h"
+#include "wayland/waycon.h"
+#include "events/pendings.h"
+#include "utils.h"
 #include "wvk.h"
 #include <stdlib.h>
 #include <string.h>

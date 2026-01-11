@@ -139,7 +139,7 @@ target_include_directories(
   PUBLIC
   "${CMAKE_CURRENT_SOURCE_DIR}/include"
   "${GEN_PROTO_DIR_H}"
-  "${CMAKE_CURRENT_SOURCE_DIR}/src/include"
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/private"
   PRIVATE
   "${WAYLAND_CLIENT_INCLUDE_DIRS}"
   "${XKBCOMMON_INCLUDE_DIRS}"

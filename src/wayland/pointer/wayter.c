@@ -1,5 +1,7 @@
-#include "event_loop.h"
-#include "waycon.h"
+#include "events/event_loop.h"
+#include "events/pendings.h"
+#include "wayland/waycon.h"
+#include "utils.h"
 #include <stdlib.h>
 #include <unistd.h>
 

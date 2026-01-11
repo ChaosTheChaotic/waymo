@@ -1,14 +1,15 @@
 #ifndef WAYCON_H
 #define WAYCON_H
 
-#include "event_loop.h"
+#include "events/commands.h"
+#include "events/event_loop.h"
 #include "wvk.h"
 #include "wvp.h"
 #include <stdbool.h>
 #include <stdint.h>
 #include <linux/input-event-codes.h>
 
-typedef struct {
+typedef struct waymoctx {
   struct wl_display *display;
   uint32_t screen_width;
   uint32_t screen_height;

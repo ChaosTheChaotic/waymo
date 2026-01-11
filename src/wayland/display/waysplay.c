@@ -1,5 +1,5 @@
-#include "event_loop.h"
-#include "waycon.h"
+#include "events/event_loop.h"
+#include "wayland/waycon.h"
 #include <stdio.h>
 #include <string.h>
 #include <wayland-client-core.h>
