@@ -18,7 +18,8 @@ void update_timer(waymo_event_loop *loop) {
   timerfd_settime(loop->timer_fd, 0, &new_val, NULL);
 }
 
-inline void schedule_action_locked(waymo_event_loop *loop, struct pending_action *action) {
+inline void schedule_action_locked(waymo_event_loop *loop,
+                                   struct pending_action *action) {
   struct pending_action **curr = &loop->pending_head;
   while (*curr && (*curr)->expiry_ms < action->expiry_ms) {
     curr = &((*curr)->next);
