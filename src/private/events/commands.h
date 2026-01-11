@@ -54,7 +54,7 @@ typedef union {
   } kbd;
 } command_param;
 
-typedef struct {
+typedef struct command {
   command_type type;
   command_param param;
 } command;

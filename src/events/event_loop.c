@@ -13,7 +13,7 @@
 void *event_loop(void *arg) {
   waymo_event_loop *loop = (waymo_event_loop *)arg;
 
-  waymoctx *ctx = init_waymoctx(loop->layout, &loop->status);
+  waymoctx *ctx = init_waymoctx(loop->kbd_layout, &loop->status);
   sem_post(&loop->ready_sem);
   if (!ctx)
     return NULL;
@@ -107,10 +107,10 @@ waymo_event_loop *create_event_loop(const struct eloop_params *params) {
   if (!loop)
     return NULL;
 
-  loop->layout = params->layout ? strdup(params->layout) : strdup("us");
+  loop->kbd_layout = params->kbd_layout ? strdup(params->kbd_layout) : strdup("us");
   loop->queue = create_queue(params->max_commands);
-  if (!loop->queue || !loop->layout) {
-    free(loop->layout);
+  if (!loop->queue || !loop->kbd_layout) {
+    free(loop->kbd_layout);
     free(loop);
     return NULL;
   }
@@ -121,7 +121,7 @@ waymo_event_loop *create_event_loop(const struct eloop_params *params) {
 
   if (pthread_mutex_init(&loop->pending_mutex, NULL) != 0) {
     destroy_queue(loop->queue);
-    free(loop->layout);
+    free(loop->kbd_layout);
     sem_destroy(&loop->ready_sem);
     free(loop);
     return NULL;
@@ -132,7 +132,7 @@ waymo_event_loop *create_event_loop(const struct eloop_params *params) {
   if (pthread_create(&loop->thread, NULL, event_loop, loop) != 0) {
     pthread_mutex_destroy(&loop->pending_mutex);
     destroy_queue(loop->queue);
-    free(loop->layout);
+    free(loop->kbd_layout);
     sem_destroy(&loop->ready_sem);
     free(loop);
     return NULL;
@@ -162,6 +162,6 @@ void destroy_event_loop(waymo_event_loop *loop) {
 
   pthread_mutex_destroy(&loop->pending_mutex);
 
-  free(loop->layout);
+  free(loop->kbd_layout);
   free(loop);
 }
