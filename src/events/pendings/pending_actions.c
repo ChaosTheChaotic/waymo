@@ -18,8 +18,7 @@ void update_timer(waymo_event_loop *loop) {
   timerfd_settime(loop->timer_fd, 0, &new_val, NULL);
 }
 
-void schedule_action(waymo_event_loop *loop, struct pending_action *action) {
-  pthread_mutex_lock(&loop->pending_mutex);
+inline void schedule_action_locked(waymo_event_loop *loop, struct pending_action *action) {
   struct pending_action **curr = &loop->pending_head;
   while (*curr && (*curr)->expiry_ms < action->expiry_ms) {
     curr = &((*curr)->next);
@@ -27,6 +26,11 @@ void schedule_action(waymo_event_loop *loop, struct pending_action *action) {
   action->next = *curr;
   *curr = action;
   update_timer(loop);
+}
+
+void schedule_action(waymo_event_loop *loop, struct pending_action *action) {
+  pthread_mutex_lock(&loop->pending_mutex);
+  schedule_action_locked(loop, action);
   pthread_mutex_unlock(&loop->pending_mutex);
 }
 
@@ -81,7 +85,7 @@ void handle_timer_expiry(waymo_event_loop *loop, waymoctx *ctx) {
           next_step->data.click.is_down = !act->data.click.is_down;
           if (!next_step->data.click.is_down)
             next_step->data.click.remaining--;
-          schedule_action(loop, next_step);
+          schedule_action_locked(loop, next_step);
         }
       }
     } else if (act->type == ACTION_TYPE_STEP) {
@@ -108,7 +112,7 @@ void handle_timer_expiry(waymo_event_loop *loop, waymoctx *ctx) {
             *next_char = *act;
             next_char->data.type_txt.index++;
             next_char->expiry_ms = now + 10; // Delay between keys
-            schedule_action(loop, next_char);
+            schedule_action_locked(loop, next_char);
 
             act->data.type_txt.txt = NULL;
           }
