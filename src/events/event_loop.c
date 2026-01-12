@@ -1,13 +1,9 @@
 #include "events/pendings.h"
-#include "wayland/waycon.h"
-#include "waymo/events.h"
+#include "events/queue.h"
 #include <errno.h>
-#include <pthread.h>
-#include <stdatomic.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/epoll.h>
-#include <sys/eventfd.h>
 #include <sys/timerfd.h>
 #include <unistd.h>
 
@@ -104,23 +100,26 @@ loop_exit:
 }
 
 waymo_event_loop *create_event_loop(const struct eloop_params *params) {
-  const struct eloop_params *checked_params;
-  if (!params) {
-    checked_params = &(struct eloop_params){
-      .kbd_layout = "us", .max_commands = 50,
-    };
-  } else {
-    checked_params = params;
-  }
-  waymo_event_loop *loop = malloc(sizeof(waymo_event_loop));
-  if (!loop)
-    return NULL;
+  const char *layout = "us";
+  int max_cmds = 50;
 
-  loop->kbd_layout =
-      checked_params->kbd_layout ? strdup(checked_params->kbd_layout) : strdup("us");
-  loop->queue = create_queue(checked_params->max_commands);
+  if (params) {
+    // Only override if the user provided valid values
+    if (params->kbd_layout) {
+      layout = params->kbd_layout;
+    }
+    max_cmds = params->max_commands;
+  }
+
+  waymo_event_loop *loop = malloc(sizeof(waymo_event_loop));
+  if (!loop) return NULL;
+
+  loop->kbd_layout = strdup(layout);
+  loop->queue = create_queue(max_cmds);
   if (!loop->queue || !loop->kbd_layout) {
     free(loop->kbd_layout);
+    if (loop->queue)
+      destroy_queue(loop->queue);
     free(loop);
     return NULL;
   }
