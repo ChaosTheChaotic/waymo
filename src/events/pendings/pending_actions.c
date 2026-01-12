@@ -1,8 +1,6 @@
 #include "events/pendings.h"
 #include "utils.h"
-#include <errno.h>
 #include <pthread.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <sys/timerfd.h>
 #include <unistd.h>
@@ -64,13 +62,16 @@ void handle_timer_expiry(waymo_event_loop *loop, waymoctx *ctx) {
     if (act->type == ACTION_KEY_RELEASE) {
       zwp_virtual_keyboard_v1_key(ctx->kbd, timestamp(), act->data.key.keycode,
                                   WL_KEYBOARD_KEY_STATE_RELEASED);
+      signal_done(act->done_fd);
       if (act->data.key.shift)
         zwp_virtual_keyboard_v1_key(ctx->kbd, timestamp(), KEY_LEFTSHIFT,
                                     WL_KEYBOARD_KEY_STATE_RELEASED);
+      signal_done(act->done_fd);
     } else if (act->type == ACTION_MOUSE_RELEASE) {
       zwlr_virtual_pointer_v1_button(ctx->ptr, timestamp(),
                                      act->data.mouse.button,
                                      WL_POINTER_BUTTON_STATE_RELEASED);
+      signal_done(act->done_fd);
       zwlr_virtual_pointer_v1_frame(ctx->ptr);
     } else if (act->type == ACTION_CLICK_STEP) {
       uint32_t state = act->data.click.is_down
@@ -91,6 +92,8 @@ void handle_timer_expiry(waymo_event_loop *loop, waymoctx *ctx) {
             next_step->data.click.remaining--;
           schedule_action_locked(loop, next_step);
         }
+      } else {
+        signal_done(act->done_fd);
       }
     } else if (act->type == ACTION_TYPE_STEP) {
       char c = act->data.type_txt.txt[act->data.type_txt.index];
@@ -121,15 +124,7 @@ void handle_timer_expiry(waymo_event_loop *loop, waymoctx *ctx) {
             act->data.type_txt.txt = NULL;
           }
         } else {
-          if (act->data.type_txt.done_fd >= 0) {
-            uint64_t sig = 1;
-            while (write(act->data.type_txt.done_fd, &sig, sizeof(sig)) < 0) {
-              if (errno == EINTR)
-                continue; // Interrupted by signal, try again
-              perror("Critical error signaling done_fd");
-              break;
-            }
-          }
+          signal_done(act->done_fd);
         }
       }
       if (act->data.type_txt.txt) {

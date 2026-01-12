@@ -57,7 +57,8 @@ void emouse_btn(waymoctx *ctx, command_param *param) {
   wl_display_flush(ctx->display);
 }
 
-void emouse_click(waymo_event_loop *loop, waymoctx *ctx, command_param *param) {
+void emouse_click(waymo_event_loop *loop, waymoctx *ctx, command_param *param,
+                  int fd) {
   if (unlikely(!ctx || !ctx->ptr || !param))
     return;
 
@@ -74,6 +75,7 @@ void emouse_click(waymo_event_loop *loop, waymoctx *ctx, command_param *param) {
   struct pending_action *act = malloc(sizeof(struct pending_action));
   if (!act)
     return;
+  act->done_fd = fd;
   act->expiry_ms = timestamp() + param->mouse_click.click_ms;
   act->type = ACTION_CLICK_STEP;
   act->data.click.button = button;

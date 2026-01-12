@@ -80,7 +80,8 @@ void waymoctx_destroy_kbd(waymoctx *ctx) {
   ctx->kbd = NULL;
 }
 
-void ekbd_key(waymo_event_loop *loop, waymoctx *ctx, command_param *param) {
+void ekbd_key(waymo_event_loop *loop, waymoctx *ctx, command_param *param,
+              int fd) {
   if (unlikely(!ctx || !param || !ctx->kbd))
     return;
 
@@ -109,12 +110,14 @@ void ekbd_key(waymo_event_loop *loop, waymoctx *ctx, command_param *param) {
     act->type = ACTION_KEY_RELEASE;
     act->data.key.keycode = key.keycode;
     act->data.key.shift = key.shift;
+    act->done_fd = fd;
     schedule_action(loop, act);
   }
   wl_display_flush(ctx->display);
 }
 
-void ekbd_type(waymo_event_loop *loop, waymoctx *ctx, command_param *param) {
+void ekbd_type(waymo_event_loop *loop, waymoctx *ctx, command_param *param,
+               int fd) {
   if (unlikely(!ctx || !param || !ctx->kbd || !param->kbd.txt))
     return;
 
@@ -131,8 +134,9 @@ void ekbd_type(waymo_event_loop *loop, waymoctx *ctx, command_param *param) {
     return;
   }
   act->data.type_txt.index = 0;
-  act->data.type_txt.done_fd = param->kbd.done_fd;
   act->next = NULL;
+
+  act->done_fd = fd;
 
   schedule_action(loop, act);
   wl_display_flush(ctx->display);

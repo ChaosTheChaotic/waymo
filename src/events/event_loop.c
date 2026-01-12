@@ -112,7 +112,8 @@ waymo_event_loop *create_event_loop(const struct eloop_params *params) {
   }
 
   waymo_event_loop *loop = malloc(sizeof(waymo_event_loop));
-  if (!loop) return NULL;
+  if (!loop)
+    return NULL;
 
   loop->kbd_layout = strdup(layout);
   loop->queue = create_queue(max_cmds);

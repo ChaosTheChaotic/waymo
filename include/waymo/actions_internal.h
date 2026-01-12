@@ -5,6 +5,7 @@
 #include "waymo/btns.h"
 #include <stdint.h>
 #include <stdbool.h>
+#include <errno.h>
 
 typedef struct command _command;
 
@@ -21,8 +22,18 @@ _command* _create_keyboard_key_cmd_uintt(char key, uint32_t hold_ms);
       uint32_t: _create_keyboard_key_cmd_uintt                                  \
   )((char)(key), (mutation))
 
-_command* _create_keyboard_type_cmd(const char *text, int done_fd);
+_command* _create_keyboard_type_cmd(const char *text);
 
-void _send_command(waymo_event_loop *loop, _command *cmd);
+void _send_command(waymo_event_loop *loop, _command *cmd, int fd);
+
+#define WAIT_COMPLETE(cmd_func, ...) do { \
+    int efd = eventfd(0, EFD_CLOEXEC);           \
+    if (efd != -1) {                             \
+        cmd_func(__VA_ARGS__, efd);                                \
+        uint64_t res;                            \
+        while (read(efd, &res, sizeof(res)) == -1 && errno == EINTR); \
+        close(efd);                              \
+    }                                            \
+} while (0)
 
 #endif

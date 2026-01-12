@@ -12,11 +12,12 @@ enum action_type { ACTION_KEY_RELEASE, ACTION_MOUSE_RELEASE, ACTION_CLICK_STEP, 
 struct pending_action {
     uint64_t expiry_ms;
     enum action_type type;
+    int done_fd;
     union {
         struct { uint32_t keycode; bool shift; } key;
         struct { uint32_t button; } mouse;
         struct { uint32_t button; uint32_t ms; unsigned int remaining; bool is_down; } click;
-	struct { char *txt; unsigned int index; int done_fd; } type_txt;
+	struct { char *txt; unsigned int index; } type_txt;
 	    } data;
     struct pending_action *next;
 };

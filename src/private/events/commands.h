@@ -47,13 +47,13 @@ typedef union {
   } keyboard_key;
   struct {
     char *txt;
-    int done_fd;
   } kbd;
 } command_param;
 
 typedef struct command {
   command_type type;
   command_param param;
+  int done_fd;
 } command;
 
 void execute_command(struct waymo_event_loop *loop, struct waymoctx *ctx, command *cmd);

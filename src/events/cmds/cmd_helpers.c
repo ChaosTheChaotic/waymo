@@ -71,7 +71,7 @@ command *_create_keyboard_key_cmd_uintt(char key, uint32_t hold_ms) {
   return cmd;
 }
 
-command *_create_keyboard_type_cmd(const char *text, int done_fd) {
+command *_create_keyboard_type_cmd(const char *text) {
   command *cmd = malloc(sizeof(command));
   if (!cmd)
     return NULL;
@@ -83,7 +83,7 @@ command *_create_keyboard_type_cmd(const char *text, int done_fd) {
   }
 
   cmd->type = CMD_KEYBOARD_TYPE;
-  cmd->param = (command_param){.kbd = {.txt = txt, .done_fd = done_fd}};
+  cmd->param = (command_param){.kbd = {.txt = txt}};
   return cmd;
 }
 
@@ -103,9 +103,11 @@ void free_command(command *cmd) {
   cmd = NULL;
 }
 
-void _send_command(waymo_event_loop *loop, command *cmd) {
+void _send_command(waymo_event_loop *loop, command *cmd, int fd) {
   if (unlikely(!loop || !cmd))
     return;
+
+  cmd->done_fd = fd;
 
   if (!add_queue(loop->queue, cmd)) {
     // Queue is full or shutting down
@@ -122,26 +124,30 @@ void execute_command(waymo_event_loop *loop, waymoctx *ctx, command *cmd) {
     if (!ctx->ptr)
       break;
     emouse_move(ctx, &cmd->param);
+    signal_done(cmd->done_fd);
     break;
   case CMD_MOUSE_CLICK:
     if (!ctx->ptr)
       break;
-    emouse_click(loop, ctx, &cmd->param);
+    emouse_click(loop, ctx, &cmd->param, cmd->done_fd);
     break;
   case CMD_MOUSE_BTN:
     if (!ctx->ptr)
       break;
     emouse_btn(ctx, &cmd->param);
+    signal_done(cmd->done_fd);
     break;
   case CMD_KEYBOARD_TYPE:
     if (!ctx->kbd)
       break;
-    ekbd_type(loop, ctx, &cmd->param);
+    ekbd_type(loop, ctx, &cmd->param, cmd->done_fd);
     break;
   case CMD_KEYBOARD_KEY:
     if (!ctx->kbd)
       break;
-    ekbd_key(loop, ctx, &cmd->param);
+    ekbd_key(loop, ctx, &cmd->param, cmd->done_fd);
+    if (cmd->param.keyboard_key.active_opt != DOWN)
+      signal_done(cmd->done_fd);
     break;
   default:
     break;
