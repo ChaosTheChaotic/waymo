@@ -90,14 +90,19 @@ void ekbd_key(waymo_event_loop *loop, waymoctx *ctx, command_param *param,
     enum wl_keyboard_key_state down = param->keyboard_key.keyboard_key_mod.down
                                           ? WL_KEYBOARD_KEY_STATE_PRESSED
                                           : WL_KEYBOARD_KEY_STATE_RELEASED;
-    if (key.shift) {
+    if (key.shift && down == WL_KEYBOARD_KEY_STATE_PRESSED) {
       zwp_virtual_keyboard_v1_key(ctx->kbd, timestamp(), KEY_LEFTSHIFT, down);
+      wl_display_flush(ctx->display);
     }
     zwp_virtual_keyboard_v1_key(ctx->kbd, timestamp(), key.keycode, down);
+    wl_display_flush(ctx->display);
+    signal_done(fd);
   } else {
-    if (key.shift)
+    if (key.shift) {
       zwp_virtual_keyboard_v1_key(ctx->kbd, timestamp(), KEY_LEFTSHIFT,
                                   WL_KEYBOARD_KEY_STATE_PRESSED);
+      wl_display_flush(ctx->display);
+    }
     zwp_virtual_keyboard_v1_key(ctx->kbd, timestamp(), key.keycode,
                                 WL_KEYBOARD_KEY_STATE_PRESSED);
     wl_display_flush(ctx->display);

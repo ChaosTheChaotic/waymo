@@ -146,8 +146,6 @@ void execute_command(waymo_event_loop *loop, waymoctx *ctx, command *cmd) {
     if (!ctx->kbd)
       break;
     ekbd_key(loop, ctx, &cmd->param, cmd->done_fd);
-    if (cmd->param.keyboard_key.active_opt != DOWN)
-      signal_done(cmd->done_fd);
     break;
   default:
     break;

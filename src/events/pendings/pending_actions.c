@@ -62,17 +62,18 @@ void handle_timer_expiry(waymo_event_loop *loop, waymoctx *ctx) {
     if (act->type == ACTION_KEY_RELEASE) {
       zwp_virtual_keyboard_v1_key(ctx->kbd, timestamp(), act->data.key.keycode,
                                   WL_KEYBOARD_KEY_STATE_RELEASED);
-      signal_done(act->done_fd);
       if (act->data.key.shift)
         zwp_virtual_keyboard_v1_key(ctx->kbd, timestamp(), KEY_LEFTSHIFT,
                                     WL_KEYBOARD_KEY_STATE_RELEASED);
+      wl_display_flush(ctx->display);
       signal_done(act->done_fd);
     } else if (act->type == ACTION_MOUSE_RELEASE) {
       zwlr_virtual_pointer_v1_button(ctx->ptr, timestamp(),
                                      act->data.mouse.button,
                                      WL_POINTER_BUTTON_STATE_RELEASED);
-      signal_done(act->done_fd);
       zwlr_virtual_pointer_v1_frame(ctx->ptr);
+      wl_display_flush(ctx->display);
+      signal_done(act->done_fd);
     } else if (act->type == ACTION_CLICK_STEP) {
       uint32_t state = act->data.click.is_down
                            ? WL_POINTER_BUTTON_STATE_RELEASED
@@ -80,6 +81,7 @@ void handle_timer_expiry(waymo_event_loop *loop, waymoctx *ctx) {
       zwlr_virtual_pointer_v1_button(ctx->ptr, timestamp(),
                                      act->data.click.button, state);
       zwlr_virtual_pointer_v1_frame(ctx->ptr);
+      wl_display_flush(ctx->display);
 
       if (act->data.click.is_down || act->data.click.remaining > 1) {
         struct pending_action *next_step =
@@ -100,9 +102,11 @@ void handle_timer_expiry(waymo_event_loop *loop, waymoctx *ctx) {
       if (c != '\0') {
         struct Key key = chartokey(c);
         if (key.keycode != 0) {
-          if (key.shift)
+          if (key.shift) {
             zwp_virtual_keyboard_v1_key(ctx->kbd, timestamp(), KEY_LEFTSHIFT,
                                         WL_KEYBOARD_KEY_STATE_PRESSED);
+            wl_display_flush(ctx->display);
+          }
           zwp_virtual_keyboard_v1_key(ctx->kbd, timestamp(), key.keycode,
                                       WL_KEYBOARD_KEY_STATE_PRESSED);
           zwp_virtual_keyboard_v1_key(ctx->kbd, timestamp(), key.keycode,
@@ -110,8 +114,10 @@ void handle_timer_expiry(waymo_event_loop *loop, waymoctx *ctx) {
           if (key.shift)
             zwp_virtual_keyboard_v1_key(ctx->kbd, timestamp(), KEY_LEFTSHIFT,
                                         WL_KEYBOARD_KEY_STATE_RELEASED);
+          wl_display_flush(ctx->display);
         }
 
+	wl_display_flush(ctx->display);
         if (act->data.type_txt.txt[act->data.type_txt.index + 1] != '\0') {
           struct pending_action *next_char =
               malloc(sizeof(struct pending_action));
