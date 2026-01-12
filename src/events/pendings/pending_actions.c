@@ -66,14 +66,14 @@ void handle_timer_expiry(waymo_event_loop *loop, waymoctx *ctx) {
         zwp_virtual_keyboard_v1_key(ctx->kbd, timestamp(), KEY_LEFTSHIFT,
                                     WL_KEYBOARD_KEY_STATE_RELEASED);
       wl_display_flush(ctx->display);
-      signal_done(act->done_fd);
+      signal_done(act->done_fd, loop->action_cooldown_ms);
     } else if (act->type == ACTION_MOUSE_RELEASE) {
       zwlr_virtual_pointer_v1_button(ctx->ptr, timestamp(),
                                      act->data.mouse.button,
                                      WL_POINTER_BUTTON_STATE_RELEASED);
       zwlr_virtual_pointer_v1_frame(ctx->ptr);
       wl_display_flush(ctx->display);
-      signal_done(act->done_fd);
+      signal_done(act->done_fd, loop->action_cooldown_ms);
     } else if (act->type == ACTION_CLICK_STEP) {
       uint32_t state = act->data.click.is_down
                            ? WL_POINTER_BUTTON_STATE_RELEASED
@@ -95,7 +95,7 @@ void handle_timer_expiry(waymo_event_loop *loop, waymoctx *ctx) {
           schedule_action_locked(loop, next_step);
         }
       } else {
-        signal_done(act->done_fd);
+        signal_done(act->done_fd, loop->action_cooldown_ms);
       }
     } else if (act->type == ACTION_TYPE_STEP) {
       char c = act->data.type_txt.txt[act->data.type_txt.index];
@@ -117,7 +117,7 @@ void handle_timer_expiry(waymo_event_loop *loop, waymoctx *ctx) {
           wl_display_flush(ctx->display);
         }
 
-	wl_display_flush(ctx->display);
+        wl_display_flush(ctx->display);
         if (act->data.type_txt.txt[act->data.type_txt.index + 1] != '\0') {
           struct pending_action *next_char =
               malloc(sizeof(struct pending_action));
@@ -130,7 +130,7 @@ void handle_timer_expiry(waymo_event_loop *loop, waymoctx *ctx) {
             act->data.type_txt.txt = NULL;
           }
         } else {
-          signal_done(act->done_fd);
+          signal_done(act->done_fd, loop->action_cooldown_ms);
         }
       }
       if (act->data.type_txt.txt) {

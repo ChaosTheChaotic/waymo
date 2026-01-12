@@ -6,6 +6,7 @@
 typedef struct eloop_params {
   unsigned int max_commands;
   char *kbd_layout;
+  unsigned int action_cooldown_ms;
 } eloop_params;
 
 typedef enum {

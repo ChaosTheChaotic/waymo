@@ -1,10 +1,10 @@
 #ifndef COMMANDS_H
 #define COMMANDS_H
 
-#include <stdbool.h>
-#include <stdint.h>
 #include "waymo/actions_internal.h"
 #include "waymo/btns.h"
+#include <stdbool.h>
+#include <stdint.h>
 
 struct waymoctx;
 struct waymo_event_loop;
@@ -56,10 +56,11 @@ typedef struct command {
   int done_fd;
 } command;
 
-void execute_command(struct waymo_event_loop *loop, struct waymoctx *ctx, command *cmd);
+void execute_command(struct waymo_event_loop *loop, struct waymoctx *ctx,
+                     command *cmd);
 
 void free_command(command *cmd);
 
-command* create_quit_cmd();
+command *create_quit_cmd();
 
 #endif

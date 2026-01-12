@@ -16,11 +16,10 @@ typedef struct {
   atomic_bool shutdown;
 } command_queue;
 
-command_queue* create_queue(unsigned int max_commands);
+command_queue *create_queue(unsigned int max_commands);
 void destroy_queue(command_queue *q);
 
 bool add_queue(command_queue *q, command *cmd);
-command* remove_queue(command_queue *q);
-
+command *remove_queue(command_queue *q);
 
 #endif

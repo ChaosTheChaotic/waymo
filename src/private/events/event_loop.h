@@ -1,10 +1,10 @@
 #ifndef ELT_H
 #define ELT_H
 
-#include <semaphore.h>
-#include <stdatomic.h>
 #include "events/queue.h"
 #include "waymo/events.h"
+#include <semaphore.h>
+#include <stdatomic.h>
 
 typedef struct waymo_event_loop {
   pthread_t thread;
@@ -15,6 +15,7 @@ typedef struct waymo_event_loop {
   int timer_fd;
   pthread_mutex_t pending_mutex;
   struct pending_action *pending_head;
+  unsigned int action_cooldown_ms;
 } waymo_event_loop;
 
 #endif

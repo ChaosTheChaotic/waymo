@@ -101,7 +101,8 @@ loop_exit:
 
 waymo_event_loop *create_event_loop(const struct eloop_params *params) {
   const char *layout = "us";
-  int max_cmds = 50;
+  unsigned int max_cmds = 50;
+  unsigned int action_cooldown_ms = 1;
 
   if (params) {
     // Only override if the user provided valid values
@@ -109,6 +110,7 @@ waymo_event_loop *create_event_loop(const struct eloop_params *params) {
       layout = params->kbd_layout;
     }
     max_cmds = params->max_commands;
+    action_cooldown_ms = params->action_cooldown_ms;
   }
 
   waymo_event_loop *loop = malloc(sizeof(waymo_event_loop));
@@ -117,6 +119,7 @@ waymo_event_loop *create_event_loop(const struct eloop_params *params) {
 
   loop->kbd_layout = strdup(layout);
   loop->queue = create_queue(max_cmds);
+  loop->action_cooldown_ms = action_cooldown_ms;
   if (!loop->queue || !loop->kbd_layout) {
     free(loop->kbd_layout);
     if (loop->queue)

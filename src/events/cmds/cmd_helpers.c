@@ -124,7 +124,7 @@ void execute_command(waymo_event_loop *loop, waymoctx *ctx, command *cmd) {
     if (!ctx->ptr)
       break;
     emouse_move(ctx, &cmd->param);
-    signal_done(cmd->done_fd);
+    signal_done(cmd->done_fd, loop->action_cooldown_ms);
     break;
   case CMD_MOUSE_CLICK:
     if (!ctx->ptr)
@@ -135,7 +135,7 @@ void execute_command(waymo_event_loop *loop, waymoctx *ctx, command *cmd) {
     if (!ctx->ptr)
       break;
     emouse_btn(ctx, &cmd->param);
-    signal_done(cmd->done_fd);
+    signal_done(cmd->done_fd, loop->action_cooldown_ms);
     break;
   case CMD_KEYBOARD_TYPE:
     if (!ctx->kbd)
