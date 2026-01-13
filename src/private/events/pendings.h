@@ -21,7 +21,6 @@ struct pending_action {
   union {
     struct {
       uint32_t keycode;
-      bool shift;
     } key;
     struct {
       uint32_t button;

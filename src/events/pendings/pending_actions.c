@@ -62,9 +62,7 @@ void handle_timer_expiry(waymo_event_loop *loop, waymoctx *ctx) {
     if (act->type == ACTION_KEY_RELEASE) {
       zwp_virtual_keyboard_v1_key(ctx->kbd, timestamp(), act->data.key.keycode,
                                   WL_KEYBOARD_KEY_STATE_RELEASED);
-      if (act->data.key.shift)
-        zwp_virtual_keyboard_v1_key(ctx->kbd, timestamp(), KEY_LEFTSHIFT,
-                                    WL_KEYBOARD_KEY_STATE_RELEASED);
+
       wl_display_flush(ctx->display);
       signal_done(act->done_fd, loop->action_cooldown_ms);
     } else if (act->type == ACTION_MOUSE_RELEASE) {
@@ -100,44 +98,32 @@ void handle_timer_expiry(waymo_event_loop *loop, waymoctx *ctx) {
     } else if (act->type == ACTION_TYPE_STEP) {
       char c = act->data.type_txt.txt[act->data.type_txt.index];
       if (c != '\0') {
-        struct Key key = chartokey(c);
-        if (key.keycode != 0) {
-          if (key.shift) {
-            zwp_virtual_keyboard_v1_key(ctx->kbd, timestamp(), KEY_LEFTSHIFT,
-                                        WL_KEYBOARD_KEY_STATE_PRESSED);
-            wl_display_flush(ctx->display);
-          }
-          zwp_virtual_keyboard_v1_key(ctx->kbd, timestamp(), key.keycode,
-                                      WL_KEYBOARD_KEY_STATE_PRESSED);
-          zwp_virtual_keyboard_v1_key(ctx->kbd, timestamp(), key.keycode,
-                                      WL_KEYBOARD_KEY_STATE_RELEASED);
-          if (key.shift)
-            zwp_virtual_keyboard_v1_key(ctx->kbd, timestamp(), KEY_LEFTSHIFT,
-                                        WL_KEYBOARD_KEY_STATE_RELEASED);
-          wl_display_flush(ctx->display);
-        }
+        wchar_t wc;
+        mbtowc(&wc, &c, 1);
 
+        uint32_t keycode = waymoctx_get_keycode(ctx, wc);
+
+        zwp_virtual_keyboard_v1_key(ctx->kbd, timestamp(), keycode,
+                                    WL_KEYBOARD_KEY_STATE_PRESSED);
+        zwp_virtual_keyboard_v1_key(ctx->kbd, timestamp(), keycode,
+                                    WL_KEYBOARD_KEY_STATE_RELEASED);
         wl_display_flush(ctx->display);
+
         if (act->data.type_txt.txt[act->data.type_txt.index + 1] != '\0') {
           struct pending_action *next_char =
               malloc(sizeof(struct pending_action));
           if (next_char) {
             *next_char = *act;
             next_char->data.type_txt.index++;
-            next_char->expiry_ms = now + 10; // Delay between keys
+            next_char->expiry_ms = now + 15;
             schedule_action_locked(loop, next_char);
-
             act->data.type_txt.txt = NULL;
           }
         } else {
           signal_done(act->done_fd, loop->action_cooldown_ms);
         }
       }
-      if (act->data.type_txt.txt) {
-        free(act->data.type_txt.txt);
-      }
     }
-
     wl_display_flush(ctx->display);
     free(act);
   }

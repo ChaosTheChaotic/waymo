@@ -10,7 +10,7 @@ int main() {
     // You can optionally create custom parameters here
     // Below are the defaults
     // const eloop_params params = {
-    //  .kbd_layout = "us", .max_commands = 50
+    //  .kbd_layout = "us", .max_commands = 50, .action_cooldown_ms = 0
     // }
     // Create the event loop
     // You can optionally pass a pointer to params if you created custom params
