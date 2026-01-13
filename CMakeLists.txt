@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.25)
 
-project("waymo" LANGUAGES C)
+project("waymo" VERSION 1.0.0 LANGUAGES C)
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
   message(FATAL_ERROR "Building on Windows is not supported.")
@@ -26,6 +26,7 @@ option(BUILD_STATIC "Build a static library for the system" ON)
 option(GENERATE_PROTOCOLS "Generate Wayland protocol files if needed" ON)
 option(MARCH_NATIVE "Build library optimized for native arch" OFF)
 option(DO_INSTALL "Try to install library after it is build" OFF)
+option(PKG_CONFIG "Install pkg-config files" ON)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -183,5 +184,11 @@ if(BUILD_SHARED OR BUILD_STATIC AND DO_INSTALL)
     install(TARGETS waymo_static
       ARCHIVE DESTINATION lib
     )
+  endif()
+
+  if(PKG_CONFIG)
+    include(GNUInstallDirs)
+    configure_file("${CMAKE_CURRENT_SOURCE_DIR}/waymo.pc.in" "${CMAKE_CURRENT_BINARY_DIR}/waymo.pc" @ONLY)
+    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/waymo.pc" DESTINATION "${CMAKE_INSTALL_FULL_LIBDIR}/pkgconfig")
   endif()
 endif()

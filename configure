@@ -33,6 +33,7 @@ CMake Options from CMakeLists.txt:
   -DGENERATE_PROTOCOLS=[ON|OFF] Generate the wayland protocols if needed (default: ON)
   -DMARCH_NATIVE=[ON|OFF]	Build with optimizations for native arch (default: OFF)
   -DDO_INSTALL=[ON|OFF]		Install the library and its headers after building it (default: OFF)
+  -DPKG_CONFIG=[ON|OFF]		Install pkg-config files along with the library (default: ON)
 
 Examples:
   $0                          # Default configuration

@@ -40,6 +40,7 @@
               "-DBUILD_STATIC=ON"
               "-DGENERATE_PROTOCOLS=ON"
               "-DUSE_CCACHE=OFF"
+	      "-DPKG_CONFIG=ON"
             ];
           };
         });
