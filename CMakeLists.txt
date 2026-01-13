@@ -25,6 +25,7 @@ option(BUILD_SHARED "Build a shared library for the system" ON)
 option(BUILD_STATIC "Build a static library for the system" ON)
 option(GENERATE_PROTOCOLS "Generate Wayland protocol files if needed" ON)
 option(MARCH_NATIVE "Build library optimized for native arch" OFF)
+option(DO_INSTALL "Try to install library after it is build" OFF)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -162,4 +163,30 @@ if(BUILD_STATIC)
   set_target_properties(waymo_static PROPERTIES OUTPUT_NAME "waymo" ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/lib/static")
 else()
   message(STATUS "Build static disabled, skipping the static library build")
+endif()
+
+if(BUILD_SHARED OR BUILD_STATIC AND DO_INSTALL)
+  # Install headers
+  install(DIRECTORY include/ DESTINATION include/waymo
+    FILES_MATCHING PATTERN "*.h"
+  )
+  
+  # Install generated protocol headers
+  install(FILES ${PROTO_K_H} ${PROTO_P_H}
+    DESTINATION include/waymo
+  )
+  
+  # Install libraries
+  if(BUILD_SHARED)
+    install(TARGETS waymo_shared
+      LIBRARY DESTINATION lib
+      RUNTIME DESTINATION bin
+    )
+  endif()
+  
+  if(BUILD_STATIC)
+    install(TARGETS waymo_static
+      ARCHIVE DESTINATION lib
+    )
+  endif()
 endif()
