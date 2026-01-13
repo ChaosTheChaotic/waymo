@@ -24,7 +24,7 @@ option(USE_LTO "Use linktime optimizations if available" ON)
 option(BUILD_SHARED "Build a shared library for the system" ON)
 option(BUILD_STATIC "Build a static library for the system" ON)
 option(GENERATE_PROTOCOLS "Generate Wayland protocol files if needed" ON)
-option(MARCH_NATIVE "Build library optimized for native arch" ON)
+option(MARCH_NATIVE "Build library optimized for native arch" OFF)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 

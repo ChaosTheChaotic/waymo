@@ -31,7 +31,7 @@ CMake Options from CMakeLists.txt:
   -DBUILD_SHARED=[ON|OFF]     	Build shared library (default: ON)
   -DBUILD_STATIC=[ON|OFF]     	Build static library (default: ON)
   -DGENERATE_PROTOCOLS=[ON|OFF] Generate the wayland protocols if needed (default: ON)
-  -DMARCH_NATIVE=[ON|OFF]	Build with optimizations for native arch (default: ON)
+  -DMARCH_NATIVE=[ON|OFF]	Build with optimizations for native arch (default: OFF)
 
 Examples:
   $0                          # Default configuration
