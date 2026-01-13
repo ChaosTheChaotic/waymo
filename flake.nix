@@ -11,23 +11,50 @@
       forAllSystems = nixpkgs.lib.genAttrs supportedSystems;
     in
     {
+      packages = forAllSystems (system:
+        let
+          pkgs = nixpkgs.legacyPackages.${system};
+        in
+        {
+          default = pkgs.stdenv.mkDerivation {
+            pname = "waymo";
+            version = "0.1.0";
+            src = ./.;
+
+            nativeBuildInputs = with pkgs; [
+              pkg-config
+              cmake
+              wayland-scanner
+              ninja
+            ];
+
+            buildInputs = with pkgs; [
+              wayland
+              libxkbcommon
+              libffi
+            ];
+
+            cmakeFlags = [
+              "-DDO_INSTALL=ON"
+              "-DBUILD_SHARED=ON"
+              "-DBUILD_STATIC=ON"
+              "-DGENERATE_PROTOCOLS=ON"
+              "-DUSE_CCACHE=OFF"
+            ];
+          };
+        });
+
       devShells = forAllSystems (system:
         let
           pkgs = nixpkgs.legacyPackages.${system};
         in
         {
           default = pkgs.mkShell {
-            nativeBuildInputs = with pkgs; [
-              pkg-config
-              cmake
-	      wayland-scanner
-	      ninja
-            ];
+            inputsFrom = [ self.packages.${system}.default ];
 
-            buildInputs = with pkgs; [
-              wayland
-              libxkbcommon
-	      libffi
+            packages = with pkgs; [
+              gdb
+              clang-tools
             ];
           };
         });

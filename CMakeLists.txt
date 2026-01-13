@@ -167,15 +167,10 @@ endif()
 
 if(BUILD_SHARED OR BUILD_STATIC AND DO_INSTALL)
   # Install headers
-  install(DIRECTORY include/ DESTINATION include/waymo
+  install(DIRECTORY include/ DESTINATION include
     FILES_MATCHING PATTERN "*.h"
   )
-  
-  # Install generated protocol headers
-  install(FILES ${PROTO_K_H} ${PROTO_P_H}
-    DESTINATION include/waymo
-  )
-  
+
   # Install libraries
   if(BUILD_SHARED)
     install(TARGETS waymo_shared
