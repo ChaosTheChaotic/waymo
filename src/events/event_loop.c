@@ -103,7 +103,7 @@ loop_exit:
 waymo_event_loop *create_event_loop(const struct eloop_params *params) {
   const char *layout = "us";
   unsigned int max_cmds = 50;
-  unsigned int action_cooldown_ms = 1;
+  unsigned int action_cooldown_ms = 0;
 
   if (params) {
     // Only override if the user provided valid values
