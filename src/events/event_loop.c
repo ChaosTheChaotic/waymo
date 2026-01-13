@@ -87,6 +87,7 @@ void *event_loop(void *arg) {
       wl_display_cancel_read(ctx->display);
     }
     wl_display_dispatch_pending(ctx->display);
+    wl_display_roundtrip(ctx->display);
   }
 
 loop_exit:
