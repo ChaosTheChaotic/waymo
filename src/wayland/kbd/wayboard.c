@@ -142,16 +142,30 @@ void ekbd_key(waymo_event_loop *loop, waymoctx *ctx, command_param *param,
     wl_display_flush(ctx->display);
     signal_done(fd, loop->action_cooldown_ms);
   } else {
+    uint32_t hold_ms = param->keyboard_key.keyboard_key_mod.hold_ms;
+    uint32_t repeat_interval_ms = *param->kbd.interval_ms ? 
+                                  *param->kbd.interval_ms : 10; // 10ms default
+    
     zwp_virtual_keyboard_v1_key(ctx->kbd, timestamp(), keycode,
                                 WL_KEYBOARD_KEY_STATE_PRESSED);
+    zwp_virtual_keyboard_v1_key(ctx->kbd, timestamp(), keycode,
+                                WL_KEYBOARD_KEY_STATE_RELEASED);
     wl_display_flush(ctx->display);
-
-    struct pending_action *act = malloc(sizeof(struct pending_action));
-    act->expiry_ms = timestamp() + param->keyboard_key.keyboard_key_mod.hold_ms;
-    act->type = ACTION_KEY_RELEASE;
-    act->data.key.keycode = keycode;
-    act->done_fd = fd;
-    schedule_action(loop, act);
+    
+    if (hold_ms > repeat_interval_ms) {
+      struct pending_action *act = malloc(sizeof(struct pending_action));
+      act->expiry_ms = timestamp() + repeat_interval_ms;
+      act->type = ACTION_KEY_REPEAT;
+      act->data.key_repeat.keycode = keycode;
+      act->data.key_repeat.repeat_interval_ms = repeat_interval_ms;
+      act->data.key_repeat.total_hold_ms = hold_ms;
+      act->data.key_repeat.elapsed_ms = repeat_interval_ms;
+      act->done_fd = fd;
+      schedule_action(loop, act);
+    } else {
+      // If hold time is less than repeat interval, just signal done
+      signal_done(fd, loop->action_cooldown_ms);
+    }
   }
 }
 

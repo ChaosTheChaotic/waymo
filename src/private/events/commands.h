@@ -47,6 +47,7 @@ typedef union {
   } keyboard_key;
   struct {
     char *txt;
+    uint32_t *interval_ms;
   } kbd;
 } command_param;
 
