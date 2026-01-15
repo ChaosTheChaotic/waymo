@@ -156,6 +156,9 @@ void handle_timer_expiry(waymo_event_loop *loop, waymoctx *ctx) {
       zwp_virtual_keyboard_v1_key(ctx->kbd, timestamp(),
                                   act->data.key_hold.keycode,
                                   WL_KEYBOARD_KEY_STATE_PRESSED);
+      zwp_virtual_keyboard_v1_key(ctx->kbd, timestamp(),
+                                  act->data.key_hold.keycode,
+                                  WL_KEYBOARD_KEY_STATE_RELEASED);
       wl_display_flush(ctx->display);
 
       struct pending_action *next_hold = malloc(sizeof(struct pending_action));
