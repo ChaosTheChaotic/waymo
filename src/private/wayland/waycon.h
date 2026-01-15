@@ -15,6 +15,8 @@ typedef struct waymoctx {
   uint32_t screen_width;
   uint32_t screen_height;
   int32_t scale_factor;
+  struct wl_output **outputs;
+  size_t outputs_len;
   struct wl_registry *registry;
   struct wl_seat *seat;
   struct zwp_virtual_keyboard_manager_v1 *kman;

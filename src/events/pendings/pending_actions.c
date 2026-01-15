@@ -126,11 +126,16 @@ void handle_timer_expiry(waymo_event_loop *loop, waymoctx *ctx) {
             next_char->expiry_ms = now + act->data.type_txt.inteval_ms;
             schedule_action_locked(loop, next_char);
             act->data.type_txt.txt = NULL;
-          }
-        } else {
-          signal_done(act->done_fd, loop->action_cooldown_ms);
-        }
-      }
+          } else
+            goto text_free;
+        } else
+          goto text_free;
+      } else
+        goto text_free;
+    text_free:
+      free(act->data.type_txt.txt);
+      act->data.type_txt.txt = NULL;
+      signal_done(act->done_fd, loop->action_cooldown_ms);
       break;
     }
     case ACTION_KEY_REPEAT: {

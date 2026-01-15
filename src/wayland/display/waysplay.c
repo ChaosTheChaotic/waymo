@@ -1,6 +1,6 @@
-#include "events/event_loop.h"
 #include "wayland/waycon.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <wayland-client-core.h>
 #include <wayland-client-protocol.h>
@@ -61,6 +61,12 @@ static void handle_wl_event(void *data, struct wl_registry *registry,
     struct wl_output *out =
         wl_registry_bind(registry, name, &wl_output_interface, 1);
     wl_output_add_listener(out, &output_listener, wctx);
+
+    // Track the output for cleanup
+    wctx->outputs = realloc(wctx->outputs, sizeof(struct wl_output *) *
+                                               (wctx->outputs_len + 1));
+    wctx->outputs[wctx->outputs_len] = out;
+    wctx->outputs_len++;
   }
 }
 
@@ -104,6 +110,15 @@ bool waymoctx_connect(waymoctx *ctx, _Atomic loop_status *status) {
 void waymoctx_destroy_connect(waymoctx *ctx) {
   if (!ctx)
     return;
+
+  for (size_t i = 0; i < ctx->outputs_len; i++) {
+    if (ctx->outputs[i]) {
+      wl_output_destroy(ctx->outputs[i]);
+    }
+  }
+  free(ctx->outputs);
+  ctx->outputs = NULL;
+  ctx->outputs_len = 0;
 
   if (ctx->seat)
     wl_seat_destroy(ctx->seat);
