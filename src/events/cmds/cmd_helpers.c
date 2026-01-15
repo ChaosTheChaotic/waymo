@@ -46,19 +46,23 @@ command *_create_mouse_button_cmd(MBTNS button, bool down) {
   return cmd;
 }
 
-command *_create_keyboard_key_cmd_b(char key, bool down) {
+command *_create_keyboard_key_cmd_b(char key, uint32_t *interval_ms,
+                                    bool down) {
   command *cmd = malloc(sizeof(command));
   if (!cmd)
     return NULL;
 
   cmd->type = CMD_KEYBOARD_KEY;
-  cmd->param = (command_param){
-      .keyboard_key = {
-          .key = key, .active_opt = DOWN, .keyboard_key_mod = {.down = down}}};
+  cmd->param =
+      (command_param){.keyboard_key = {.key = key,
+                                       .active_opt = DOWN,
+                                       .interval_ms = interval_ms,
+                                       .keyboard_key_mod = {.down = down}}};
   return cmd;
 }
 
-command *_create_keyboard_key_cmd_uintt(char key, uint32_t hold_ms) {
+command *_create_keyboard_key_cmd_uintt(char key, uint32_t *interval_ms,
+                                        uint32_t hold_ms) {
   command *cmd = malloc(sizeof(command));
   if (!cmd)
     return NULL;
@@ -67,6 +71,7 @@ command *_create_keyboard_key_cmd_uintt(char key, uint32_t hold_ms) {
   cmd->param = (command_param){
       .keyboard_key = {.key = key,
                        .active_opt = HOLD,
+                       .interval_ms = interval_ms,
                        .keyboard_key_mod = {.hold_ms = hold_ms}}};
   return cmd;
 }

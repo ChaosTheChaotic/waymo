@@ -58,7 +58,7 @@ void handle_timer_expiry(waymo_event_loop *loop, waymoctx *ctx) {
   while (loop->pending_head && loop->pending_head->expiry_ms <= now) {
     struct pending_action *act = loop->pending_head;
     loop->pending_head = act->next;
-      // Schedule next repeat if we haven't reached total hold time
+    // Schedule next repeat if we haven't reached total hold time
 
     if (act->type == ACTION_KEY_RELEASE) {
       zwp_virtual_keyboard_v1_key(ctx->kbd, timestamp(), act->data.key.keycode,
@@ -116,7 +116,7 @@ void handle_timer_expiry(waymo_event_loop *loop, waymoctx *ctx) {
           if (next_char) {
             *next_char = *act;
             next_char->data.type_txt.index++;
-	    next_char->expiry_ms = now + act->data.type_txt.inteval_ms;
+            next_char->expiry_ms = now + act->data.type_txt.inteval_ms;
             schedule_action_locked(loop, next_char);
             act->data.type_txt.txt = NULL;
           }
@@ -126,25 +126,30 @@ void handle_timer_expiry(waymo_event_loop *loop, waymoctx *ctx) {
       }
     } else if (act->type == ACTION_KEY_REPEAT) {
       // Send key press and release for this repeat
-      zwp_virtual_keyboard_v1_key(ctx->kbd, timestamp(), act->data.key_repeat.keycode,
+      zwp_virtual_keyboard_v1_key(ctx->kbd, timestamp(),
+                                  act->data.key_repeat.keycode,
                                   WL_KEYBOARD_KEY_STATE_PRESSED);
-      zwp_virtual_keyboard_v1_key(ctx->kbd, timestamp(), act->data.key_repeat.keycode,
+      zwp_virtual_keyboard_v1_key(ctx->kbd, timestamp(),
+                                  act->data.key_repeat.keycode,
                                   WL_KEYBOARD_KEY_STATE_RELEASED);
       wl_display_flush(ctx->display);
 
       // Schedule next if not reached required time
-      act->data.key_repeat.elapsed_ms += act->data.key_repeat.repeat_interval_ms;
-      
-      if (act->data.key_repeat.elapsed_ms < act->data.key_repeat.total_hold_ms) {
+      act->data.key_repeat.elapsed_ms +=
+          act->data.key_repeat.repeat_interval_ms;
+
+      if (act->data.key_repeat.elapsed_ms <
+          act->data.key_repeat.total_hold_ms) {
         struct pending_action *next_repeat =
             malloc(sizeof(struct pending_action));
         if (next_repeat) {
           *next_repeat = *act;
-          next_repeat->expiry_ms = now + act->data.key_repeat.repeat_interval_ms;
+          next_repeat->expiry_ms =
+              now + act->data.key_repeat.repeat_interval_ms;
           schedule_action_locked(loop, next_repeat);
         }
       } else {
-	// Held for required time
+        // Held for required time
         signal_done(act->done_fd, loop->action_cooldown_ms);
       }
     }

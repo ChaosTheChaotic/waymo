@@ -40,6 +40,7 @@ typedef union {
   struct {
     char key;
     enum KMODOPT active_opt;
+    uint32_t *interval_ms;
     union {
       bool down;
       uint32_t hold_ms;

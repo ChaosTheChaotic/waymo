@@ -143,15 +143,15 @@ void ekbd_key(waymo_event_loop *loop, waymoctx *ctx, command_param *param,
     signal_done(fd, loop->action_cooldown_ms);
   } else {
     uint32_t hold_ms = param->keyboard_key.keyboard_key_mod.hold_ms;
-    uint32_t repeat_interval_ms = *param->kbd.interval_ms ? 
-                                  *param->kbd.interval_ms : 10; // 10ms default
-    
+    uint32_t repeat_interval_ms =
+        param->keyboard_key.interval_ms ? *param->keyboard_key.interval_ms : 10;
+
     zwp_virtual_keyboard_v1_key(ctx->kbd, timestamp(), keycode,
                                 WL_KEYBOARD_KEY_STATE_PRESSED);
     zwp_virtual_keyboard_v1_key(ctx->kbd, timestamp(), keycode,
                                 WL_KEYBOARD_KEY_STATE_RELEASED);
     wl_display_flush(ctx->display);
-    
+
     if (hold_ms > repeat_interval_ms) {
       struct pending_action *act = malloc(sizeof(struct pending_action));
       act->expiry_ms = timestamp() + repeat_interval_ms;
@@ -187,6 +187,8 @@ void ekbd_type(waymo_event_loop *loop, waymoctx *ctx, command_param *param,
     return;
   }
   act->data.type_txt.index = 0;
+  act->data.type_txt.inteval_ms =
+      param->kbd.interval_ms ? *param->kbd.interval_ms : 10;
   act->next = NULL;
 
   act->done_fd = fd;

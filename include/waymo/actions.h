@@ -17,12 +17,12 @@ static inline void press_mouse(waymo_event_loop *loop, MBTNS btn, bool down) {
   WAIT_COMPLETE(_send_command, loop, _create_mouse_button_cmd(btn, down));
 }
 
-static inline void hold_key(waymo_event_loop *loop, char key, uint32_t hold_ms) {
-  WAIT_COMPLETE(_send_command, loop, _create_keyboard_key_cmd(key, hold_ms));
+static inline void hold_key(waymo_event_loop *loop, char key, uint32_t *interval_ms, uint32_t hold_ms) {
+  WAIT_COMPLETE(_send_command, loop, _create_keyboard_key_cmd(key, interval_ms, hold_ms));
 }
 
-static inline void press_key(waymo_event_loop *loop, char key, bool down) {
-  WAIT_COMPLETE(_send_command, loop, _create_keyboard_key_cmd(key, down));
+static inline void press_key(waymo_event_loop *loop, char key, uint32_t *interval_ms, bool down) {
+  WAIT_COMPLETE(_send_command, loop, _create_keyboard_key_cmd(key, interval_ms, down));
 }
 
 static inline void type(waymo_event_loop *loop, const char *text, uint32_t *interval_ms) {
