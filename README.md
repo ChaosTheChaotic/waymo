@@ -33,7 +33,8 @@ Then run the configure script and build it
 Note that there are configure flags you could use
 The configure script is just a bash script
 ```bash
-./configure
+# Optionally to install (if not on nixos)
+./configure -DDO_INSTALL=ON
 ```
 ```bash
 cmake --build build
