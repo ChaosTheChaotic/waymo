@@ -134,13 +134,32 @@ void ekbd_key(waymo_event_loop *loop, waymoctx *ctx, command_param *param,
   uint32_t keycode = waymoctx_get_keycode(ctx, wc);
 
   if (param->keyboard_key.active_opt == DOWN) {
-    uint32_t state = param->keyboard_key.keyboard_key_mod.down
-                         ? WL_KEYBOARD_KEY_STATE_PRESSED
-                         : WL_KEYBOARD_KEY_STATE_RELEASED;
+    bool down = param->keyboard_key.keyboard_key_mod.down;
+    uint32_t state =
+        down ? WL_KEYBOARD_KEY_STATE_PRESSED : WL_KEYBOARD_KEY_STATE_RELEASED;
 
     zwp_virtual_keyboard_v1_key(ctx->kbd, timestamp(), keycode, state);
     wl_display_flush(ctx->display);
-    signal_done(fd, loop->action_cooldown_ms);
+
+    // If pressing down, schedule spam press events
+    if (down) {
+      uint32_t repeat_interval_ms = param->keyboard_key.interval_ms
+                                        ? *param->keyboard_key.interval_ms
+                                        : 100;
+
+      struct pending_action *act = malloc(sizeof(struct pending_action));
+      if (act) {
+        act->expiry_ms = timestamp() + repeat_interval_ms;
+        act->type = ACTION_KEY_HOLD;
+        act->data.key_hold.keycode = keycode;
+        act->data.key_hold.interval_ms = repeat_interval_ms;
+        act->done_fd = fd;
+        schedule_action(loop, act);
+      }
+    } else {
+      // If releasing, signal done immediately
+      signal_done(fd, loop->action_cooldown_ms);
+    }
   } else {
     uint32_t hold_ms = param->keyboard_key.keyboard_key_mod.hold_ms;
     uint32_t repeat_interval_ms =

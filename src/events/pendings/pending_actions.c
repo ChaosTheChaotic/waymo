@@ -152,6 +152,18 @@ void handle_timer_expiry(waymo_event_loop *loop, waymoctx *ctx) {
         // Held for required time
         signal_done(act->done_fd, loop->action_cooldown_ms);
       }
+    } else if (act->type == ACTION_KEY_HOLD) {
+      zwp_virtual_keyboard_v1_key(ctx->kbd, timestamp(),
+                                  act->data.key_hold.keycode,
+                                  WL_KEYBOARD_KEY_STATE_PRESSED);
+      wl_display_flush(ctx->display);
+
+      struct pending_action *next_hold = malloc(sizeof(struct pending_action));
+      if (next_hold) {
+        *next_hold = *act;
+        next_hold->expiry_ms = now + act->data.key_hold.interval_ms;
+        schedule_action_locked(loop, next_hold);
+      }
     }
     wl_display_flush(ctx->display);
     free(act);

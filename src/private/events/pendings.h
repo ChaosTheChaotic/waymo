@@ -13,6 +13,7 @@ enum action_type {
   ACTION_CLICK_STEP,
   ACTION_TYPE_STEP,
   ACTION_KEY_REPEAT,
+  ACTION_KEY_HOLD,
 };
 
 struct pending_action {
@@ -43,6 +44,10 @@ struct pending_action {
       uint32_t total_hold_ms;
       uint32_t elapsed_ms;
     } key_repeat;
+    struct {
+      uint32_t keycode;
+      uint32_t interval_ms;
+    } key_hold;
   } data;
   struct pending_action *next;
 };
