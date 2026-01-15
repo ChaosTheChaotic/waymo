@@ -33,7 +33,7 @@ Then run the configure script and build it
 Note that there are configure flags you could use
 The configure script is just a bash script
 ```bash
-# Optionally to install (if not on nixos)
+# Optionally to install (if not on nixos; for installation on nixos, just add this repo as a flake input)
 ./configure -DDO_INSTALL=ON
 ```
 ```bash
