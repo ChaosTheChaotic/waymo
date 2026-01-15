@@ -22,7 +22,7 @@ _command* _create_keyboard_key_cmd_uintt(char key, uint32_t hold_ms);
       uint32_t: _create_keyboard_key_cmd_uintt                                  \
   )((char)(key), (mutation))
 
-_command* _create_keyboard_type_cmd(const char *text);
+_command* _create_keyboard_type_cmd(const char *text, uint32_t *interval_ms);
 
 void _send_command(waymo_event_loop *loop, _command *cmd, int fd);
 

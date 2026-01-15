@@ -71,7 +71,7 @@ command *_create_keyboard_key_cmd_uintt(char key, uint32_t hold_ms) {
   return cmd;
 }
 
-command *_create_keyboard_type_cmd(const char *text) {
+command *_create_keyboard_type_cmd(const char *text, uint32_t *interval_ms) {
   command *cmd = malloc(sizeof(command));
   if (!cmd)
     return NULL;
@@ -83,7 +83,7 @@ command *_create_keyboard_type_cmd(const char *text) {
   }
 
   cmd->type = CMD_KEYBOARD_TYPE;
-  cmd->param = (command_param){.kbd = {.txt = txt}};
+  cmd->param = (command_param){.kbd = {.txt = txt, .interval_ms = interval_ms}};
   return cmd;
 }
 

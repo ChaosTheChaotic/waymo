@@ -25,8 +25,8 @@ static inline void press_key(waymo_event_loop *loop, char key, bool down) {
   WAIT_COMPLETE(_send_command, loop, _create_keyboard_key_cmd(key, down));
 }
 
-static inline void type(waymo_event_loop *loop, const char *text) {
-  WAIT_COMPLETE(_send_command, loop, _create_keyboard_type_cmd(text));
+static inline void type(waymo_event_loop *loop, const char *text, uint32_t *interval_ms) {
+  WAIT_COMPLETE(_send_command, loop, _create_keyboard_type_cmd(text, interval_ms));
 }
 
 #endif
