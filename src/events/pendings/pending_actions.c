@@ -60,20 +60,25 @@ void handle_timer_expiry(waymo_event_loop *loop, waymoctx *ctx) {
     loop->pending_head = act->next;
     // Schedule next repeat if we haven't reached total hold time
 
-    if (act->type == ACTION_KEY_RELEASE) {
+    switch (act->type) {
+    case ACTION_KEY_RELEASE: {
       zwp_virtual_keyboard_v1_key(ctx->kbd, timestamp(), act->data.key.keycode,
                                   WL_KEYBOARD_KEY_STATE_RELEASED);
 
       wl_display_flush(ctx->display);
       signal_done(act->done_fd, loop->action_cooldown_ms);
-    } else if (act->type == ACTION_MOUSE_RELEASE) {
+      break;
+    }
+    case ACTION_MOUSE_RELEASE: {
       zwlr_virtual_pointer_v1_button(ctx->ptr, timestamp(),
                                      act->data.mouse.button,
                                      WL_POINTER_BUTTON_STATE_RELEASED);
       zwlr_virtual_pointer_v1_frame(ctx->ptr);
       wl_display_flush(ctx->display);
       signal_done(act->done_fd, loop->action_cooldown_ms);
-    } else if (act->type == ACTION_CLICK_STEP) {
+      break;
+    }
+    case ACTION_CLICK_STEP: {
       uint32_t state = act->data.click.is_down
                            ? WL_POINTER_BUTTON_STATE_RELEASED
                            : WL_POINTER_BUTTON_STATE_PRESSED;
@@ -96,7 +101,9 @@ void handle_timer_expiry(waymo_event_loop *loop, waymoctx *ctx) {
       } else {
         signal_done(act->done_fd, loop->action_cooldown_ms);
       }
-    } else if (act->type == ACTION_TYPE_STEP) {
+      break;
+    }
+    case ACTION_TYPE_STEP: {
       char c = act->data.type_txt.txt[act->data.type_txt.index];
       if (c != '\0') {
         wchar_t wc;
@@ -124,7 +131,9 @@ void handle_timer_expiry(waymo_event_loop *loop, waymoctx *ctx) {
           signal_done(act->done_fd, loop->action_cooldown_ms);
         }
       }
-    } else if (act->type == ACTION_KEY_REPEAT) {
+      break;
+    }
+    case ACTION_KEY_REPEAT: {
       // Send key press and release for this repeat
       zwp_virtual_keyboard_v1_key(ctx->kbd, timestamp(),
                                   act->data.key_repeat.keycode,
@@ -152,7 +161,9 @@ void handle_timer_expiry(waymo_event_loop *loop, waymoctx *ctx) {
         // Held for required time
         signal_done(act->done_fd, loop->action_cooldown_ms);
       }
-    } else if (act->type == ACTION_KEY_HOLD) {
+      break;
+    }
+    case ACTION_KEY_HOLD: {
       zwp_virtual_keyboard_v1_key(ctx->kbd, timestamp(),
                                   act->data.key_hold.keycode,
                                   WL_KEYBOARD_KEY_STATE_PRESSED);
@@ -167,6 +178,8 @@ void handle_timer_expiry(waymo_event_loop *loop, waymoctx *ctx) {
         next_hold->expiry_ms = now + act->data.key_hold.interval_ms;
         schedule_action_locked(loop, next_hold);
       }
+      break;
+    }
     }
     wl_display_flush(ctx->display);
     free(act);
