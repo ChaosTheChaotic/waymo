@@ -36,7 +36,7 @@ struct pending_action {
     struct {
       char *txt;
       unsigned int index;
-      uint32_t inteval_ms;
+      uint32_t interval_ms;
     } type_txt;
     struct {
       uint32_t keycode;

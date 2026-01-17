@@ -206,7 +206,7 @@ void ekbd_type(waymo_event_loop *loop, waymoctx *ctx, command_param *param,
     return;
   }
   act->data.type_txt.index = 0;
-  act->data.type_txt.inteval_ms =
+  act->data.type_txt.interval_ms =
       param->kbd.interval_ms ? *param->kbd.interval_ms : 10;
   act->next = NULL;
 

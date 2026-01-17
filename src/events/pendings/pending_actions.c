@@ -123,7 +123,7 @@ void handle_timer_expiry(waymo_event_loop *loop, waymoctx *ctx) {
           if (next_char) {
             *next_char = *act;
             next_char->data.type_txt.index++;
-            next_char->expiry_ms = now + act->data.type_txt.inteval_ms;
+            next_char->expiry_ms = now + act->data.type_txt.interval_ms;
             schedule_action_locked(loop, next_char);
             act->data.type_txt.txt = NULL;
           } else
