@@ -25,7 +25,7 @@ enum KMODOPT {
 
 typedef union {
   struct {
-    int x, y;
+    unsigned int x, y;
     bool relative;
   } pos;
   struct {

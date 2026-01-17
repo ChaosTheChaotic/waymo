@@ -15,7 +15,7 @@ typedef struct waymo_event_loop {
   int timer_fd;
   pthread_mutex_t pending_mutex;
   struct pending_action *pending_head;
-  unsigned int action_cooldown_ms;
+  uint32_t action_cooldown_ms;
 } waymo_event_loop;
 
 #endif

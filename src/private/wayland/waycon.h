@@ -5,10 +5,10 @@
 #include "events/event_loop.h"
 #include "wvk.h"
 #include "wvp.h"
-#include <xkbcommon/xkbcommon.h>
 #include <linux/input-event-codes.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <xkbcommon/xkbcommon.h>
 
 typedef struct waymoctx {
   struct wl_display *display;
@@ -66,8 +66,8 @@ static inline uint32_t mbtnstoliec(MBTNS btn) {
 }
 
 struct keymap_entry {
-    xkb_keysym_t xkb;
-    wchar_t wchr;
+  xkb_keysym_t xkb;
+  wchar_t wchr;
 };
 
 #endif

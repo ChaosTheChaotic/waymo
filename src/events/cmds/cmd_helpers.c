@@ -13,7 +13,7 @@ command *create_quit_cmd() {
   return cmd;
 }
 
-command *_create_mouse_move_cmd(int x, int y, bool relative) {
+command *_create_mouse_move_cmd(unsigned int x, unsigned int y, bool relative) {
   command *cmd = malloc(sizeof(command));
   if (!cmd)
     return NULL;
