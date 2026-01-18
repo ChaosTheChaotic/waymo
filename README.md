@@ -41,5 +41,9 @@ cmake --build build
 ```
 The output libraries are in the `lib/` directory
 
+## Other missing features
+- Screen capture/recording is missing as a feature due to the low support for the new protocol (ext-image-copy-capture-v1) across major Wayland programs, and my unwillingness to spend time implementing a deprecated protocol only to have to replace it soon
+- Input reception is also not implemented due to the lack of support for reading global input with Wayland calling it a "security feature" and my unwillingness to force people to install extra programs (like xdg-desktop-portal) just to have it work
+
 ## Architecture and workings
 This library works by using a custom thread that runs an event loop. This is done due to automation often requiring spespfic ordered inputs and having these mixed up by things like race conditions would make this unreliable. The event loop uses an internal queue and mutex for managing commands. The event loop also has a linked list for pending events where it uses timerfd to schedule events without blocking the event loop.
