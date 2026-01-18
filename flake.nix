@@ -34,6 +34,11 @@
               libffi
             ];
 
+	    nativeCheckInputs = with pkgs; [
+	      cmocka
+	    ];
+	    doCheck = true;
+
             cmakeFlags = [
               "-DDO_INSTALL=ON"
               "-DBUILD_SHARED=ON"
@@ -41,6 +46,8 @@
               "-DGENERATE_PROTOCOLS=ON"
               "-DUSE_CCACHE=OFF"
 	      "-DPKG_CONFIG=ON"
+              "-DCMOCKA_LIBRARY=${pkgs.cmocka}/lib/libcmocka.so"
+              "-DCMOCKA_INCLUDE_DIR=${pkgs.cmocka}/include"
             ];
           };
         });
@@ -56,6 +63,7 @@
             packages = with pkgs; [
               gdb
               clang-tools
+	      cmocka
             ];
           };
         });

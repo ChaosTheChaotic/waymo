@@ -43,6 +43,8 @@ if(NOT USE_CCACHE)
   message(STATUS "ccache disabled")
 endif()
 
+enable_testing()
+
 add_library(waymo_settings INTERFACE)
 
 target_compile_options(waymo_settings INTERFACE -Wall -Wpedantic -Wno-strict-prototypes)
@@ -147,6 +149,11 @@ target_include_directories(
   "${XKBCOMMON_INCLUDE_DIRS}"
 )
 target_link_libraries(waymo_obj PRIVATE waymo_settings PUBLIC waymo_deps)
+
+include(CTest)
+if(BUILD_TESTING)
+  add_subdirectory(tests)
+endif()
 
 if(BUILD_SHARED)
   message(STATUS "Build shared enabled, building the shared library")
