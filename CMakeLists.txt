@@ -155,6 +155,10 @@ if(BUILD_TESTING)
   add_subdirectory(tests)
 endif()
 
+add_executable(waymo_cli "${CMAKE_CURRENT_SOURCE_DIR}/bindings/bash/waymo.c")
+target_link_libraries(waymo_cli PRIVATE waymo_obj waymo_deps waymo_settings)
+set_target_properties(waymo_cli PROPERTIES OUTPUT_NAME "waymo" RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
+
 if(BUILD_SHARED)
   message(STATUS "Build shared enabled, building the shared library")
   add_library(waymo_shared SHARED)
@@ -173,29 +177,32 @@ else()
   message(STATUS "Build static disabled, skipping the static library build")
 endif()
 
-if(BUILD_SHARED OR BUILD_STATIC AND DO_INSTALL)
-  # Install headers
-  install(DIRECTORY include/ DESTINATION include
-    FILES_MATCHING PATTERN "*.h"
-  )
-
-  # Install libraries
-  if(BUILD_SHARED)
-    install(TARGETS waymo_shared
-      LIBRARY DESTINATION lib
-      RUNTIME DESTINATION bin
+if(DO_INSTALL)
+  if(BUILD_SHARED OR BUILD_STATIC)
+    # Install headers
+    install(DIRECTORY include/ DESTINATION include
+      FILES_MATCHING PATTERN "*.h"
     )
-  endif()
-  
-  if(BUILD_STATIC)
-    install(TARGETS waymo_static
-      ARCHIVE DESTINATION lib
-    )
-  endif()
 
-  if(PKG_CONFIG)
-    include(GNUInstallDirs)
-    configure_file("${CMAKE_CURRENT_SOURCE_DIR}/waymo.pc.in" "${CMAKE_CURRENT_BINARY_DIR}/waymo.pc" @ONLY)
-    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/waymo.pc" DESTINATION "${CMAKE_INSTALL_FULL_LIBDIR}/pkgconfig")
+    # Install libraries
+    if(BUILD_SHARED)
+      install(TARGETS waymo_shared
+        LIBRARY DESTINATION lib
+        RUNTIME DESTINATION bin
+      )
+    endif()
+    
+    if(BUILD_STATIC)
+      install(TARGETS waymo_static
+        ARCHIVE DESTINATION lib
+      )
+    endif()
+
+    if(PKG_CONFIG)
+      include(GNUInstallDirs)
+      configure_file("${CMAKE_CURRENT_SOURCE_DIR}/waymo.pc.in" "${CMAKE_CURRENT_BINARY_DIR}/waymo.pc" @ONLY)
+      install(FILES "${CMAKE_CURRENT_BINARY_DIR}/waymo.pc" DESTINATION "${CMAKE_INSTALL_FULL_LIBDIR}/pkgconfig")
+    endif()
   endif()
+  install(TARGETS waymo_cli RUNTIME DESTINATION bin)
 endif()
