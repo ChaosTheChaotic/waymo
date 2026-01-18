@@ -126,7 +126,7 @@ void handle_timer_expiry(waymo_event_loop *loop, waymoctx *ctx) {
             next_char->expiry_ms = now + act->data.type_txt.interval_ms;
             schedule_action_locked(loop, next_char);
             act->data.type_txt.txt = NULL;
-	    break;
+            break;
           } else
             goto text_free;
         } else
