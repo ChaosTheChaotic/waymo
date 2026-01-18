@@ -1,20 +1,22 @@
+#include <getopt.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdbool.h>
-#include <getopt.h>
 
-#include <waymo/events.h>
 #include <waymo/actions.h>
 #include <waymo/btns.h>
+#include <waymo/events.h>
 
 bool parse_bool(const char *str) {
-  if (!str) return false;
+  if (!str)
+    return false;
   return (strcasecmp(str, "true") == 0 || strcmp(str, "1") == 0);
 }
 
 bool parse_mouse_btn(const char *str, MBTNS *out_btn) {
-  if (!str) return false;
+  if (!str)
+    return false;
 
   if (strcasecmp(str, "left") == 0) {
     *out_btn = MBTN_LEFT;
@@ -34,7 +36,9 @@ bool parse_mouse_btn(const char *str, MBTNS *out_btn) {
 
 void print_usage(const char *prog) {
   fprintf(stderr, "Usage: %s [options] <action> [args]\n", prog);
-  fprintf(stderr, "Options:\n  -l, --layout <lang>  Set keyboard layout (default: us)\n\n");
+  fprintf(
+      stderr,
+      "Options:\n  -l, --layout <lang>  Set keyboard layout (default: us)\n\n");
   fprintf(stderr, "Actions:\n");
   fprintf(stderr, "  move <x> <y> [is_relative]\n");
   fprintf(stderr, "  click <btn> [clicks] [hold_ms]\n");
@@ -48,23 +52,21 @@ int main(int argc, char **argv) {
   char *layout = "us";
   int opt;
 
-  static struct option long_options[] = {
-    {"layout", required_argument, 0, 'l'},
-    {"help",   no_argument,       0, 'h'},
-    {0, 0, 0, 0}
-  };
+  static struct option long_options[] = {{"layout", required_argument, 0, 'l'},
+                                         {"help", no_argument, 0, 'h'},
+                                         {0, 0, 0, 0}};
 
   while ((opt = getopt_long(argc, argv, "l:h", long_options, NULL)) != -1) {
     switch (opt) {
-      case 'l':
-        layout = optarg;
-        break;
-      case 'h':
-        print_usage(argv[0]);
-        return 0;
-      default:
-        print_usage(argv[0]);
-        return 1;
+    case 'l':
+      layout = optarg;
+      break;
+    case 'h':
+      print_usage(argv[0]);
+      return 0;
+    default:
+      print_usage(argv[0]);
+      return 1;
     }
   }
 
@@ -75,10 +77,7 @@ int main(int argc, char **argv) {
   }
 
   const eloop_params params = {
-    .action_cooldown_ms = 0,
-    .kbd_layout = layout,
-    .max_commands = 1
-  };
+      .action_cooldown_ms = 0, .kbd_layout = layout, .max_commands = 1};
 
   waymo_event_loop *loop = create_event_loop(&params);
   if (!loop) {
@@ -94,7 +93,8 @@ int main(int argc, char **argv) {
   if (strcmp(action, "move") == 0) {
     if (args_left < 2) {
       fprintf(stderr, "Usage: move <x> <y> [relative]\n");
-      ret = 1; goto cleanup;
+      ret = 1;
+      goto cleanup;
     }
     unsigned int x = strtoul(args[0], NULL, 10);
     unsigned int y = strtoul(args[1], NULL, 10);
@@ -105,13 +105,17 @@ int main(int argc, char **argv) {
   } else if (strcmp(action, "click") == 0) {
     if (args_left < 1) {
       fprintf(stderr, "Usage: click <btn> [clicks] [hold_ms]\n");
-      ret = 1; goto cleanup;
+      ret = 1;
+      goto cleanup;
     }
-    
+
     MBTNS btn;
     if (!parse_mouse_btn(args[0], &btn)) {
-        fprintf(stderr, "Error: Invalid mouse button '%s' (Use: left, right, middle)\n", args[0]);
-        ret = 1; goto cleanup;
+      fprintf(stderr,
+              "Error: Invalid mouse button '%s' (Use: left, right, middle)\n",
+              args[0]);
+      ret = 1;
+      goto cleanup;
     }
 
     unsigned int clicks = (args_left >= 2) ? strtoul(args[1], NULL, 10) : 1;
@@ -122,13 +126,17 @@ int main(int argc, char **argv) {
   } else if (strcmp(action, "press_mouse") == 0) {
     if (args_left < 2) {
       fprintf(stderr, "Usage: press_mouse <btn> <down>\n");
-      ret = 1; goto cleanup;
+      ret = 1;
+      goto cleanup;
     }
 
     MBTNS btn;
     if (!parse_mouse_btn(args[0], &btn)) {
-        fprintf(stderr, "Error: Invalid mouse button '%s' (Use: left, right, middle)\n", args[0]);
-        ret = 1; goto cleanup;
+      fprintf(stderr,
+              "Error: Invalid mouse button '%s' (Use: left, right, middle)\n",
+              args[0]);
+      ret = 1;
+      goto cleanup;
     }
 
     bool down = parse_bool(args[1]);
@@ -137,7 +145,8 @@ int main(int argc, char **argv) {
   } else if (strcmp(action, "type") == 0) {
     if (args_left < 1) {
       fprintf(stderr, "Usage: type <text> [interval_ms]\n");
-      ret = 1; goto cleanup;
+      ret = 1;
+      goto cleanup;
     }
     const char *text = args[0];
     uint32_t interval_val;
@@ -153,7 +162,8 @@ int main(int argc, char **argv) {
   } else if (strcmp(action, "press_key") == 0) {
     if (args_left < 2) {
       fprintf(stderr, "Usage: press_key <char> <down> [interval_ms]\n");
-      ret = 1; goto cleanup;
+      ret = 1;
+      goto cleanup;
     }
     char key = args[0][0];
     bool down = parse_bool(args[1]);
@@ -170,7 +180,8 @@ int main(int argc, char **argv) {
   } else if (strcmp(action, "hold_key") == 0) {
     if (args_left < 2) {
       fprintf(stderr, "Usage: hold_key <char> <hold_ms> [interval_ms]\n");
-      ret = 1; goto cleanup;
+      ret = 1;
+      goto cleanup;
     }
     char key = args[0][0];
     uint32_t hold_ms = strtoul(args[1], NULL, 10);
