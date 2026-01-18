@@ -1,0 +1,11 @@
+[package]
+name = "waymo-sys"
+version = "0.1.0"
+edition = "2024"
+build = "build.rs"
+links = "waymo"
+
+[dependencies]
+
+[build-dependencies]
+bindgen = "0.72.1"
