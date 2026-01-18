@@ -42,7 +42,7 @@ cmake --build build
 The output libraries are in the `lib/` directory
 
 ## Other missing features
-- Screen capture/recording is missing as a feature due to the low support for the new protocol (ext-image-copy-capture-v1) across major Wayland programs, and my unwillingness to spend time implementing a deprecated protocol only to have to replace it soon
+- Screen capture/recording is missing as a feature due to the low support for the new protocol (ext-image-copy-capture-v1) across major Wayland programs, and my unwillingness to spend time implementing a deprecated protocol only to have to replace it soon. I would suggest just using grim as they have maintainers and a project that already works well
 - Input reception is also not implemented due to the lack of support for reading global input with Wayland calling it a "security feature" and my unwillingness to force people to install extra programs (like xdg-desktop-portal) just to have it work
 
 ## Architecture and workings
