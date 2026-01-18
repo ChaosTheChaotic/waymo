@@ -18,7 +18,8 @@ int main() {
     // Check its status and handle errors if needed
     loop_status status = get_event_loop_status(loop);
     // Call one of the API functions to do something inside actions.h
-    type(loop, "Hello, world!");
+    uint32_t ms = 10;
+    type(loop, "Hello, world!", &ms);
     // Cleanup the event loop
     destroy_event_loop(loop);
 }
