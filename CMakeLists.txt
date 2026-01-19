@@ -151,8 +151,8 @@ target_include_directories(
 )
 target_link_libraries(waymo_obj PRIVATE waymo_settings PUBLIC waymo_deps)
 
-include(CTest)
 if(BUILD_TESTING)
+  include(CTest)
   add_subdirectory(tests)
 endif()
 

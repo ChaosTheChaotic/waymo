@@ -13,6 +13,7 @@ fn main() {
         .define("BUILD_STATIC", "ON")
         .define("BUILD_SHARED", "OFF")
         .define("DO_INSTALL", "OFF")
+        .define("BUILD_TESTING", "OFF")
         // This prevents the 'make: *** No rule to make target install' error
         .no_build_target(true) 
         .build();
