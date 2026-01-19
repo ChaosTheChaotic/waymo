@@ -12,8 +12,11 @@ pub struct WaymoEventLoop {
 impl WaymoEventLoop {
     pub fn new(params: Option<EloopParams>) -> Option<Self> {
         unsafe {
-            let p = params.map_or(ptr::null(), |v| v.inner);
-            let ptr = wsys::create_event_loop(p as *mut _);
+            let p_ptr = match &params {
+                        Some(p) => p.inner as *mut _,
+                        _ => ptr::null_mut(),
+            };
+            let ptr = wsys::create_event_loop(p_ptr);
             if ptr.is_null() {
                 return None;
             }

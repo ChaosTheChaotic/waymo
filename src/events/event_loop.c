@@ -133,6 +133,8 @@ waymo_event_loop *create_event_loop(const struct eloop_params *params) {
   loop->pending_head = NULL;
   atomic_init(&loop->status, STATUS_OK);
 
+  sem_init(&loop->ready_sem, 0, 0);
+
   if (pthread_mutex_init(&loop->pending_mutex, NULL) != 0) {
     destroy_queue(loop->queue);
     free(loop->kbd_layout);
@@ -140,8 +142,6 @@ waymo_event_loop *create_event_loop(const struct eloop_params *params) {
     free(loop);
     return NULL;
   }
-
-  sem_init(&loop->ready_sem, 0, 0);
 
   if (pthread_create(&loop->thread, NULL, event_loop, loop) != 0) {
     pthread_mutex_destroy(&loop->pending_mutex);
