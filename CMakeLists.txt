@@ -27,6 +27,7 @@ option(GENERATE_PROTOCOLS "Generate Wayland protocol files if needed" ON)
 option(MARCH_NATIVE "Build library optimized for native arch" OFF)
 option(DO_INSTALL "Try to install library after it is build" OFF)
 option(PKG_CONFIG "Install pkg-config files" ON)
+option(BUILD_PYTHON "Build the python library" OFF)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -207,24 +208,26 @@ if(DO_INSTALL)
   install(TARGETS waymo_cli RUNTIME DESTINATION bin)
 endif()
 
-find_package(Python COMPONENTS Interpreter Development REQUIRED)
-find_package(nanobind CONFIG REQUIRED)
-nanobind_add_module(
-    waymo_python
-    bindings/python/bindings.cc
-)
-
-set_target_properties(waymo_python PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
-
-target_link_libraries(waymo_python PRIVATE 
-    waymo_static 
-    ${WAYLAND_CLIENT_LIBRARIES} 
-    ${XKBCOMMON_LIBRARIES}
-)
-
-nanobind_add_stub(
-    waymo_python_stub
-    MODULE waymo_python
-    OUTPUT waymo_python.pyi
-    DEPENDS waymo_python
-)
+if(BUILD_PYTHON)
+  find_package(Python COMPONENTS Interpreter Development REQUIRED)
+  find_package(nanobind CONFIG REQUIRED)
+  nanobind_add_module(
+      waymo_python
+      bindings/python/bindings.cc
+  )
+  
+  set_target_properties(waymo_python PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
+  
+  target_link_libraries(waymo_python PRIVATE 
+      waymo_static 
+      ${WAYLAND_CLIENT_LIBRARIES} 
+      ${XKBCOMMON_LIBRARIES}
+  )
+  
+  nanobind_add_stub(
+      waymo_python_stub
+      MODULE waymo_python
+      OUTPUT waymo_python.pyi
+      DEPENDS waymo_python
+  )
+endif()
