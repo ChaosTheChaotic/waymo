@@ -3,3 +3,15 @@ build/
 .cache/
 
 target/
+
+venv/
+.venv/
+env/
+.env
+
+__pycache__/
+*.py[cod]
+*$py.class
+
+_skbuild/
+*.so

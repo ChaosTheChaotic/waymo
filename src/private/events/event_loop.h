@@ -10,7 +10,7 @@ typedef struct waymo_event_loop {
   pthread_t thread;
   command_queue *queue;
   char *kbd_layout;
-  _Atomic loop_status status;
+  WAYMO_ATOMIC(loop_status) status;
   sem_t ready_sem;
   int timer_fd;
   pthread_mutex_t pending_mutex;

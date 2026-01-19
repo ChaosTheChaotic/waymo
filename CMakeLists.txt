@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.25)
 
-project("waymo" VERSION 1.0.0 LANGUAGES C)
+project("waymo" VERSION 1.0.0 LANGUAGES C CXX)
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
   message(FATAL_ERROR "Building on Windows is not supported.")
@@ -206,3 +206,25 @@ if(DO_INSTALL)
   endif()
   install(TARGETS waymo_cli RUNTIME DESTINATION bin)
 endif()
+
+find_package(Python COMPONENTS Interpreter Development REQUIRED)
+find_package(nanobind CONFIG REQUIRED)
+nanobind_add_module(
+    waymo_python
+    bindings/python/bindings.cc
+)
+
+set_target_properties(waymo_python PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
+
+target_link_libraries(waymo_python PRIVATE 
+    waymo_static 
+    ${WAYLAND_CLIENT_LIBRARIES} 
+    ${XKBCOMMON_LIBRARIES}
+)
+
+nanobind_add_stub(
+    waymo_python_stub
+    MODULE waymo_python
+    OUTPUT waymo_python.pyi
+    DEPENDS waymo_python
+)

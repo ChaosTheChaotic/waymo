@@ -1,6 +1,10 @@
 #ifndef PCMDS_H
 #define PCMDS_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "waymo/btns.h"
 #include "waymo/events.h"
 #include <errno.h>
@@ -19,11 +23,13 @@ _command *_create_keyboard_key_cmd_b(char key, uint32_t *interval_ms,
 _command *_create_keyboard_key_cmd_uintt(char key, uint32_t *interval_ms,
                                          uint32_t hold_ms);
 
+#ifndef __cplusplus
 #define _create_keyboard_key_cmd(key, interval, mutation)                      \
   _Generic((mutation),                                                         \
       bool: _create_keyboard_key_cmd_b,                                        \
       uint32_t: _create_keyboard_key_cmd_uintt)((char)(key), (interval),       \
                                                 (mutation))
+#endif
 
 _command *_create_keyboard_type_cmd(const char *text, uint32_t *interval_ms);
 
@@ -40,5 +46,9 @@ void _send_command(waymo_event_loop *loop, _command *cmd, int fd);
       close(efd);                                                              \
     }                                                                          \
   } while (0)
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

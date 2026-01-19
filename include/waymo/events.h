@@ -6,6 +6,10 @@
 #ifndef PEVENTS_H
 #define PEVENTS_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <pthread.h>
 #include <stdint.h>
 
@@ -48,5 +52,9 @@ void destroy_event_loop(waymo_event_loop *loop);
  * @param[in] loop A pointer to the loop to be checked
  */
 loop_status get_event_loop_status(waymo_event_loop *loop);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

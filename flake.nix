@@ -64,6 +64,11 @@
               gdb
               clang-tools
 	      cmocka
+
+	      rustc
+	      cargo
+
+	      uv
             ];
           };
         });

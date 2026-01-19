@@ -6,6 +6,10 @@
 #ifndef ACTIONS_H
 #define ACTIONS_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "waymo/actions_internal.h"
 #include <sys/eventfd.h>
 #include <unistd.h>
@@ -59,7 +63,11 @@ static inline void press_mouse(waymo_event_loop *loop, MBTNS btn, bool down) {
  */
 static inline void press_key(waymo_event_loop *loop, char key,
                              uint32_t *interval_ms, bool down) {
+#ifdef __cplusplus
+  _send_command(loop, _create_keyboard_key_cmd_b(key, interval_ms, down), -1);
+#else
   _send_command(loop, _create_keyboard_key_cmd(key, interval_ms, down), -1);
+#endif
 }
 
 /**
@@ -75,7 +83,12 @@ static inline void press_key(waymo_event_loop *loop, char key,
  */
 static inline void hold_key(waymo_event_loop *loop, char key,
                             uint32_t *interval_ms, uint32_t hold_ms) {
+#ifdef __cplusplus
+  _send_command(loop, _create_keyboard_key_cmd_uintt(key, interval_ms, hold_ms),
+                -1);
+#else
   _send_command(loop, _create_keyboard_key_cmd(key, interval_ms, hold_ms), -1);
+#endif
 }
 
 /**
@@ -90,5 +103,9 @@ static inline void type(waymo_event_loop *loop, const char *text,
   WAIT_COMPLETE(_send_command, loop,
                 _create_keyboard_type_cmd(text, interval_ms));
 }
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

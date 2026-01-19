@@ -1,6 +1,7 @@
 #ifndef QUEUE_H
 #define QUEUE_H
 
+#include "events/atomic_compat.h"
 #include "events/commands.h"
 #include <pthread.h>
 #include <stdatomic.h>
@@ -13,7 +14,7 @@ typedef struct {
   unsigned int max_capacity;
   pthread_mutex_t mutex;
   int fd;
-  atomic_bool shutdown;
+  WAYMO_ATOMIC_BOOL shutdown;
 } command_queue;
 
 command_queue *create_queue(unsigned int max_commands);
