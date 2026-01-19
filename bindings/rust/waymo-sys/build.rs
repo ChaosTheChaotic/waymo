@@ -2,25 +2,36 @@ use std::env;
 use std::path::PathBuf;
 
 fn main() {
-    let proot = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap())
-        .ancestors()
-        .nth(3)
-        .unwrap()
-        .to_path_buf();
+    let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
+    let proot = manifest_dir.ancestors().nth(3).unwrap().to_path_buf();
 
-    // Link libwaymo statically from the lib/static directory
+    pkg_config::probe_library("wayland-client").expect("libwayland-client not found");
+    pkg_config::probe_library("xkbcommon").expect("libxkbcommon not found");
+
+    // Build the static library
+    let _dst = cmake::Config::new(&proot)
+        .define("BUILD_STATIC", "ON")
+        .define("BUILD_SHARED", "OFF")
+        .define("DO_INSTALL", "OFF")
+        // This prevents the 'make: *** No rule to make target install' error
+        .no_build_target(true) 
+        .build();
+
     println!(
         "cargo:rustc-link-search=native={}",
         proot.join("lib/static").display()
     );
     println!("cargo:rustc-link-lib=static=waymo");
 
-    println!("cargo:rustc-link-lib=dylib=xkbcommon");
-    println!("cargo:rustc-link-lib=dylib=wayland-client");
+    let header_path = proot.join("include/waymo/actions.h");
+    let include_path = proot.join("include");
+
+    println!("cargo:rerun-if-changed={}", header_path.display());
 
     let bindings = bindgen::Builder::default()
-        .header(proot.join("include/waymo/actions.h").display().to_string())
-        .clang_arg(format!("-I{}", proot.join("include").display()))
+        .header(header_path.display().to_string())
+        .clang_arg(format!("-I{}", include_path.display()))
+        .clang_arg(format!("-I{}/build/generated/proto/include", _dst.display()))
         .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
         .generate()
         .expect("Unable to generate bindings");
