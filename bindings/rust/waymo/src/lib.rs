@@ -1,7 +1,7 @@
-use waymo_sys as wsys;
-use std::ptr;
+use libc::{c_char, close, eventfd, read, EFD_CLOEXEC, EINTR};
 use std::ffi::CString;
-use libc::{EFD_CLOEXEC, EINTR, c_char, close, eventfd, read};
+use std::ptr;
+use waymo_sys as wsys;
 
 #[derive(Debug, Clone, Copy)]
 pub enum MouseButton {
@@ -41,9 +41,9 @@ impl WaymoEventLoop {
     }
 
     // Emulate the WAIT_COMPLETE macro logic
-    fn wait_complete<F>(&self, f: F) 
-    where 
-        F: FnOnce(i32)
+    fn wait_complete<F>(&self, f: F)
+    where
+        F: FnOnce(i32),
     {
         unsafe {
             let efd = eventfd(0, EFD_CLOEXEC);
@@ -111,6 +111,8 @@ impl WaymoEventLoop {
 
 impl Drop for WaymoEventLoop {
     fn drop(&mut self) {
-        unsafe { wsys::destroy_event_loop(self.inner); }
+        unsafe {
+            wsys::destroy_event_loop(self.inner);
+        }
     }
 }
