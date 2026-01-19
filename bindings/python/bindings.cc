@@ -1,3 +1,4 @@
+#include "events/event_loop.h"
 #include "waymo/actions.h"
 #include "waymo/btns.h"
 #include "waymo/events.h"
@@ -25,6 +26,9 @@ NB_MODULE(waymo_python, m) {
       .def_rw("max_commands", &eloop_params::max_commands)
       .def_rw("kbd_layout", &eloop_params::kbd_layout)
       .def_rw("action_cooldown_ms", &eloop_params::action_cooldown_ms);
+
+  nb::class_<waymo_event_loop>(m, "WaymoEventLoop");
+
 
   m.def("create_event_loop", &create_event_loop, nb::arg("params") = nullptr,
         nb::rv_policy::reference, "Creates an event loop for sending inputs");

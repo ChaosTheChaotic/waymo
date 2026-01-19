@@ -223,6 +223,12 @@ if(BUILD_PYTHON)
       ${WAYLAND_CLIENT_LIBRARIES} 
       ${XKBCOMMON_LIBRARIES}
   )
+
+  install(
+        TARGETS waymo_python
+        LIBRARY DESTINATION .
+        RUNTIME DESTINATION .
+  )
   
   nanobind_add_stub(
       waymo_python_stub
@@ -230,4 +236,6 @@ if(BUILD_PYTHON)
       OUTPUT waymo_python.pyi
       DEPENDS waymo_python
   )
+
+  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/waymo_python.pyi DESTINATION .)
 endif()

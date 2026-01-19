@@ -18,7 +18,7 @@ extern "C" {
  */
 typedef struct eloop_params {
   unsigned int max_commands;   /**< The max commands in the queue */
-  char *kbd_layout;            /**< The layout of the keyboard */
+  const char *kbd_layout;      /**< The layout of the keyboard */
   uint32_t action_cooldown_ms; /**< Cooldown between each action */
 } eloop_params;
 

@@ -3,7 +3,7 @@ requires = ["scikit-build-core", "nanobind"]
 build-backend = "scikit_build_core.build"
 
 [project]
-name = "waymo-python"
+name = "waymo_python"
 version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = []
@@ -11,7 +11,6 @@ dependencies = []
 [tool.scikit-build]
 sdist.include = ["python/*.cpp"]
 cmake.source-dir = "../.."
-wheel.py-api = "cp312"
 
 [tool.scikit-build.cmake.define]
 BUILD_TESTING = "OFF"
