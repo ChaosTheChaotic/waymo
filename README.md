@@ -46,5 +46,15 @@ The output libraries are in the `lib/` directory
 - Screen capture/recording is missing as a feature due to the low support for the new protocol (ext-image-copy-capture-v1) across major Wayland programs, and my unwillingness to spend time implementing a deprecated protocol only to have to replace it soon. I would suggest just using grim as they have maintainers and a project that already works well
 - Input reception is also not implemented due to the lack of support for reading global input with Wayland calling it a "security feature" and my unwillingness to force people to install extra programs (like xdg-desktop-portal) just to have it work
 
+## Bindings for other languages
+Currently the library has bindings to:
+- Bash
+- Golang
+- Typescript/Javascript
+- Python
+- Rust
+
+You install all of these through the langauges method of installing packages from github. Most of these have not been extensively tested. You may likely need dependencies for many of these as they must build the static library to link it.
+
 ## Architecture and workings
 This library works by using a custom thread that runs an event loop. This is done due to automation often requiring spespfic ordered inputs and having these mixed up by things like race conditions would make this unreliable. The event loop uses an internal queue and mutex for managing commands. The event loop also has a linked list for pending events where it uses timerfd to schedule events without blocking the event loop.
