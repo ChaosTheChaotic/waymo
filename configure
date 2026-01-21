@@ -35,6 +35,7 @@ CMake Options from CMakeLists.txt:
   -DDO_INSTALL=[ON|OFF]		Install the library and its headers after building it (default: OFF)
   -DPKG_CONFIG=[ON|OFF]		Install pkg-config files along with the library (default: ON)
   -DBUILD_PYTHON=[ON|OFF]	Build the python library (default: OFF)
+  -DBUILD_NAPI=[ON|OFF]		Build the nodejs bindings (default: OFF)
 
 Examples:
   $0                          # Default configuration
