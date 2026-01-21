@@ -5,7 +5,7 @@
   "main": "bindings/napi/build/Release/waymo_napi.node",
   "types": "bindings/napi/index.d.ts",
   "scripts": {
-    "install": "cd bindings/napi && cmake-js compile"
+    "install": "./configure -DBUILD_TESTING=OFF && cmake --build build && cd bindings/napi && cmake-js compile"
   },
   "dependencies": {
     "cmake-js": "^7.4.0",
