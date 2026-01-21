@@ -5,6 +5,7 @@ package waymo
 #cgo LDFLAGS: -L${SRCDIR}/../lib/static -lwaymo -Wl,-Bstatic -lwaymo -Wl,-Bdynamic -lxkbcommon -lwayland-client -lm -lpthread
 
 #include "waymo.h"
+#include <stdlib.h>
 */
 import "C"
 import (

@@ -1,4 +1,5 @@
 #include "waymo.h"
+#include "waymo/actions.h"
 
 waymo_event_loop* waymo_create_event_loop(const eloop_params* params) {
     return create_event_loop(params);
