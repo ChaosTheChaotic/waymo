@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.25)
+cmake_minimum_required(VERSION 3.30)
 
 project("waymo" VERSION 1.0.0 LANGUAGES C CXX)
 
@@ -6,12 +6,12 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
   message(FATAL_ERROR "Building on Windows is not supported.")
 endif()
 
-if(CMAKE_C_STANDARD_LATEST GREATER_EQUAL 17)
+if(CMAKE_C_STANDARD_LATEST GREATER_EQUAL 17 AND NOT CMAKE_C_STANDARD_LATEST EQUAL 90 AND NOT CMAKE_C_STANDARD_LATEST EQUAL 99)
   set(CMAKE_C_STANDARD 17)
-elseif(CMAKE_C_STANDARD_LATEST GREATER_EQUAL 11)
+elseif(CMAKE_C_STANDARD_LATEST GREATER_EQUAL 11 AND NOT CMAKE_C_STANDARD_LATEST EQUAL 90 AND NOT CMAKE_C_STANDARD_LATEST EQUAL 99)
   set(CMAKE_C_STANDARD 11)
 else()
-  message(FATAL_ERROR "Compiler does not support C17 or C11 (for atomics). Build aborted.")
+  message(FATAL_ERROR "Compiler does not support C17 or C11. Latest detected: ${CMAKE_C_STANDARD_LATEST}")
 endif()
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
@@ -151,8 +151,8 @@ target_include_directories(
 )
 target_link_libraries(waymo_obj PRIVATE waymo_settings PUBLIC waymo_deps)
 
+include(CTest)
 if(BUILD_TESTING)
-  include(CTest)
   add_subdirectory(tests)
 endif()
 
@@ -169,13 +169,49 @@ else()
   message(STATUS "Build shared disabled, skipping the shared library build")
 endif()
 
-if(BUILD_STATIC)
+if(BUILD_STATIC OR BUILD_PYTHON)
   message(STATUS "Build static enabled, building the static library")
   add_library(waymo_static STATIC)
   target_link_libraries(waymo_static PUBLIC waymo_obj waymo_deps PRIVATE waymo_settings)
   set_target_properties(waymo_static PROPERTIES OUTPUT_NAME "waymo" ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/lib/static")
 else()
   message(STATUS "Build static disabled, skipping the static library build")
+endif()
+
+if(BUILD_PYTHON)
+  find_package(Python COMPONENTS Interpreter Development REQUIRED)
+  find_package(nanobind CONFIG REQUIRED)
+  nanobind_add_module(
+    waymo_python
+    bindings/python/bindings.cc
+  )
+
+  set_target_properties(waymo_python PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
+
+  target_link_libraries(waymo_python PRIVATE 
+    waymo_static 
+    ${WAYLAND_CLIENT_LIBRARIES} 
+    ${XKBCOMMON_LIBRARIES}
+  )
+
+  if(DO_INSTALL)
+    install(
+      TARGETS waymo_python
+      LIBRARY DESTINATION .
+      RUNTIME DESTINATION .
+    )
+  endif()
+
+  nanobind_add_stub(
+    waymo_python_stub
+    MODULE waymo_python
+    OUTPUT waymo_python.pyi
+    DEPENDS waymo_python
+  )
+
+  if(DO_INSTALL)
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/waymo_python.pyi DESTINATION .)
+  endif()
 endif()
 
 if(DO_INSTALL)
@@ -188,14 +224,14 @@ if(DO_INSTALL)
     # Install libraries
     if(BUILD_SHARED)
       install(TARGETS waymo_shared
-        LIBRARY DESTINATION lib
-        RUNTIME DESTINATION bin
+	LIBRARY DESTINATION lib
+	RUNTIME DESTINATION bin
       )
     endif()
-    
+
     if(BUILD_STATIC)
       install(TARGETS waymo_static
-        ARCHIVE DESTINATION lib
+	ARCHIVE DESTINATION lib
       )
     endif()
 
@@ -206,36 +242,4 @@ if(DO_INSTALL)
     endif()
   endif()
   install(TARGETS waymo_cli RUNTIME DESTINATION bin)
-endif()
-
-if(BUILD_PYTHON)
-  find_package(Python COMPONENTS Interpreter Development REQUIRED)
-  find_package(nanobind CONFIG REQUIRED)
-  nanobind_add_module(
-      waymo_python
-      bindings/python/bindings.cc
-  )
-  
-  set_target_properties(waymo_python PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
-  
-  target_link_libraries(waymo_python PRIVATE 
-      waymo_static 
-      ${WAYLAND_CLIENT_LIBRARIES} 
-      ${XKBCOMMON_LIBRARIES}
-  )
-
-  install(
-        TARGETS waymo_python
-        LIBRARY DESTINATION .
-        RUNTIME DESTINATION .
-  )
-  
-  nanobind_add_stub(
-      waymo_python_stub
-      MODULE waymo_python
-      OUTPUT waymo_python.pyi
-      DEPENDS waymo_python
-  )
-
-  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/waymo_python.pyi DESTINATION .)
 endif()
