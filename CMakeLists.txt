@@ -28,6 +28,7 @@ option(MARCH_NATIVE "Build library optimized for native arch" OFF)
 option(DO_INSTALL "Try to install library after it is build" OFF)
 option(PKG_CONFIG "Install pkg-config files" ON)
 option(BUILD_PYTHON "Build the python library" OFF)
+option(BUILD_NAPI "Build the node bindings" OFF)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -211,6 +212,31 @@ if(BUILD_PYTHON)
 
   if(DO_INSTALL)
     install(FILES ${CMAKE_CURRENT_BINARY_DIR}/waymo_python.pyi DESTINATION .)
+  endif()
+endif()
+
+if(BUILD_NAPI)
+  add_library(waymo_napi SHARED bindings/napi/wayscript.cc)
+
+  if(CMAKE_JS_INC)
+    target_include_directories(waymo_napi PRIVATE "${CMAKE_JS_INC}")
+  endif()
+
+  target_include_directories(waymo_napi PRIVATE "bindings/napi/node_modules/node-addon-api")
+
+  target_link_libraries(waymo_napi PRIVATE 
+    waymo_obj
+    waymo_deps
+    ${CMAKE_JS_LIB}
+  )
+
+  set_target_properties(waymo_napi PROPERTIES 
+    PREFIX "" 
+    SUFFIX ".node"
+  )
+
+  if(DO_INSTALL)
+    install(TARGETS waymo_napi LIBRARY DESTINATION lib)
   endif()
 endif()
 

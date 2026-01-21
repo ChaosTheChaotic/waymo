@@ -1,0 +1,14 @@
+{
+  "name": "Waymo",
+  "description": "Node bindings for waymo",
+  "version": "1.0.0",
+  "main": "bindings/napi/build/Release/waymo_napi.node",
+  "types": "bindings/napi/index.d.ts",
+  "scripts": {
+    "install": "cd bindings/napi && cmake-js compile"
+  },
+  "dependencies": {
+    "cmake-js": "^7.4.0",
+    "node-addon-api": "^7.1.1"
+  }
+}
