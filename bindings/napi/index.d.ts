@@ -4,8 +4,20 @@ export enum MBTNS {
     MBTN_MID = 2
 }
 
+export interface WaymoLoopConfig {
+    /** Maximum number of commands in the queue */
+    maxCommands?: number;
+    
+    /** Keyboard layout (e.g., "us", "gb", "fr") */
+    kbdLayout?: string;
+    
+    /** Cooldown between each action in milliseconds */
+    actionCooldownMs?: number;
+}
+
 export class WaymoLoop {
-    constructor();
+    /** Creates a new Waymo event loop with optional configuration */
+    constructor(config?: WaymoLoopConfig);
     
     /** Moves mouse to coordinates or relative to current position */
     moveMouse(x: number, y: number, relative: boolean): void;

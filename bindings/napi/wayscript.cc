@@ -1,5 +1,6 @@
 #include "waymo/actions.h"
 #include "waymo/events.h"
+#include <cstring>
 #include <napi.h>
 
 class WaymoLoop : public Napi::ObjectWrap<WaymoLoop> {
@@ -28,7 +29,49 @@ public:
 
   WaymoLoop(const Napi::CallbackInfo &info)
       : Napi::ObjectWrap<WaymoLoop>(info) {
-    this->loop = create_event_loop(NULL);
+    Napi::Env env = info.Env();
+
+    // Check if parameters were provided
+    if (info.Length() > 0 && info[0].IsObject()) {
+      Napi::Object config = info[0].As<Napi::Object>();
+      eloop_params params;
+
+      memset(&params, 0, sizeof(params));
+
+      if (config.Has("maxCommands")) {
+        params.max_commands =
+            config.Get("maxCommands").As<Napi::Number>().Uint32Value();
+      } else {
+        params.max_commands = Napi::Number::New(env, 50).Uint32Value();
+      }
+
+      std::string kbdLayoutString;
+      if (config.Has("kbdLayout")) {
+        kbdLayoutString =
+            config.Get("kbdLayout").As<Napi::String>().Utf8Value();
+        params.kbd_layout = kbdLayoutString.c_str();
+      } else {
+        params.kbd_layout = "us";
+      }
+
+      if (config.Has("actionCooldownMs")) {
+        params.action_cooldown_ms =
+            config.Get("actionCooldownMs").As<Napi::Number>().Uint32Value();
+      } else {
+        params.action_cooldown_ms = Napi::Number::New(env, 0).Uint32Value();
+      }
+
+      this->loop = create_event_loop(&params);
+    } else {
+      this->loop = create_event_loop(NULL);
+    }
+
+    // Check if loop was created successfully
+    if (!this->loop) {
+      Napi::Error::New(env, "Failed to create event loop")
+          .ThrowAsJavaScriptException();
+      return;
+    }
   }
 
   ~WaymoLoop() {
@@ -64,6 +107,7 @@ private:
   }
 
   Napi::Value PressMouse(const Napi::CallbackInfo &info) {
+
     MBTNS btn = static_cast<MBTNS>(info[0].As<Napi::Number>().Uint32Value());
     bool down = info[1].As<Napi::Boolean>().Value();
     press_mouse(this->loop, btn, down);
